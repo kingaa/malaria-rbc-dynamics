@@ -1,0 +1,3 @@
+default: 
+
+include ../rules.mk
