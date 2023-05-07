@@ -377,7 +377,7 @@ argument.
 +       "sigmaw","sigman","sigmar",
 +       "sigmaRBC","sigmaPd","sigmaRetic"),
 +     coefs=coefs,
-+     control=list(reltol=1e-4,maxit=1e6)
++     control=list(reltol=1e-8,maxit=1e6)
 +   ) -> ofun
 > 
 > tic <- Sys.time()
@@ -387,32 +387,20 @@ argument.
 +     par=coef(po,c("alphaw","alphan","alphar",
 +       "sigmaw","sigman","sigmar",
 +       "sigmaRBC","sigmaPd","sigmaRetic"),transform=TRUE),
-+     control=list(maxit=200,reltol=1e-3,trace=0)
++     control=list(maxit=200,reltol=1e-4,trace=0)
 +   )
 + ) -> fit
+Error in optim(fn = function(x) { : 
+  non-finite finite-difference value [371]
 > toc <- Sys.time()
 > fit
-$par
-     alphaw      alphan      alphar      sigmaw      sigman      sigmar 
- -0.4473098   0.5385186  -0.6668225  -7.0096580   0.3274831  -0.8047988 
-   sigmaRBC     sigmaPd  sigmaRetic 
- -1.2614103   0.8277182 -13.1861798 
-
-$value
-[1] -359.1385
-
-$counts
-function gradient 
-     202       NA 
-
-$convergence
-[1] 1
-
-$message
-NULL
-
+[1] "Error in optim(fn = function(x) { : \n  non-finite finite-difference value [371]\n"
+attr(,"class")
+[1] "try-error"
+attr(,"condition")
+<simpleError in optim(fn = function(x) {    dim(x) <- dim(coefs)    dimnames(x) <- dimnames(coefs)    object@states <<- x    ss <- sum(dprocess(object, log = TRUE))    ll <- sum(dmeasure(object, log = TRUE))    -(ss + ll)}, par = coefs, method = "BFGS", control = control): non-finite finite-difference value [371]>
 > toc-tic
-Time difference of 1.168353 hours
+Time difference of 10.28162 hours
 > 
 > save.image(file="nw11_hier.rda")
 > 
@@ -424,55 +412,16 @@ Time difference of 1.168353 hours
 4      sigmaR 7.500000e-01
 5      sigmaW 7.500000e-01
 6      sigmaN 7.500000e-01
-7      alphan 1.872219e+00
-8      sigman 1.388860e+00
-9      alphar 6.501061e-01
-10     sigmar 4.363533e-01
-11     alphaw 7.222391e-01
-12     sigmaw 2.889476e-03
-13   sigmaRBC 1.380111e-01
-14 sigmaRetic 1.069172e-05
-15    sigmaPd 2.073872e+00
+7      alphan 4.100388e+00
+8      sigman 1.278260e-01
+9      alphar 1.882135e+00
+10     sigmar 4.915950e-01
+11     alphaw 8.813500e-01
+12     sigmaw 9.437888e-02
+13   sigmaRBC 2.808035e-01
+14 sigmaRetic 6.162253e-04
+15    sigmaPd 6.438559e-01
 > 
 > convergence <- fit$convergence
-> min.fit <- fit$value
-> 
-> 
-> ## -----------------------------------------------------------------------------
-> ## evalq(object,envir=environment(ofun)) -> po
-> ## 
-> ## coef(po) |>
-> ##   as.data.frame() |>
-> ##   t() |>
-> ##   as_tibble() |>
-> ##   mutate(
-> ##     box="02",
-> ##     paba="0.005",
-> ##     lambdaM=1000,
-> ##     lambdaE=1000,
-> ##     sigmaR=0.75,
-> ##     sigmaW=0.75,
-> ##     sigmaN=0.75,
-> ##     fit=min.fit,
-> ##     con=convergence
-> ##   ) -> coef_df
-> ## 
-> ## po |>
-> ##   as_tibble() |>
-> ##   mutate(
-> ##     K=log((exp(R)+exp(E))*(1-exp(-exp(M)/(exp(R)+exp(E))))),
-> ##     box="02",
-> ##     paba="0.005",
-> ##     lambdaM=1000,
-> ##     lambdaE=1000,
-> ##     sigmaR=0.75,
-> ##     sigmaW=0.75,
-> ##     sigmaN=0.75,
-> ##     fit=min.fit,
-> ##     con=convergence
-> ##   ) -> po_df
-> 
-> 
-> proc.time()
-    user   system  elapsed 
-3754.210  458.831 4211.023 
+Error in fit$convergence : $ operator is invalid for atomic vectors
+Execution halted

@@ -379,7 +379,7 @@ argument.
 +       "sigmaw","sigman","sigmar",
 +       "sigmaRBC","sigmaPd","sigmaRetic"),
 +     coefs=coefs,
-+     control=list(reltol=1e-4,maxit=1e6)
++     control=list(reltol=1e-8,maxit=1e6)
 +   ) -> ofun
 > 
 > tic <- Sys.time()
@@ -389,23 +389,23 @@ argument.
 +     par=coef(po,c("alphaw","alphan","alphar",
 +       "sigmaw","sigman","sigmar",
 +       "sigmaRBC","sigmaPd","sigmaRetic"),transform=TRUE),
-+     control=list(maxit=200,reltol=1e-3,trace=0)
++     control=list(maxit=500,reltol=1e-4,trace=0)
 +   )
 + ) -> fit
 > toc <- Sys.time()
 > fit
 $par
-    alphaw     alphan     alphar     sigmaw     sigman     sigmar   sigmaRBC 
- 20.654588  11.265336   2.087196  -9.805948 -12.756398  -1.928575   1.718412 
-   sigmaPd sigmaRetic 
- -1.436369 -34.635017 
+      alphaw       alphan       alphar       sigmaw       sigman       sigmar 
+ 66.56581161  -5.24699882  69.67068541 -31.96821210   0.38341879  -1.61121202 
+    sigmaRBC      sigmaPd   sigmaRetic 
+-21.27179740   0.05432945 -86.18946674 
 
 $value
-[1] -1054.637
+[1] -2016.38
 
 $counts
 function gradient 
-     202       NA 
+     502       NA 
 
 $convergence
 [1] 1
@@ -414,7 +414,7 @@ $message
 NULL
 
 > toc-tic
-Time difference of 41.35591 mins
+Time difference of 10.03907 hours
 > 
 > save.image(file="nw11_hier.rda")
 > 
@@ -426,15 +426,15 @@ Time difference of 41.35591 mins
 4      sigmaR 7.500000e-01
 5      sigmaW 7.500000e-01
 6      sigmaN 7.500000e-01
-7      alphan 9.999958e-01
-8      sigman 6.865546e-07
-9      alphar 9.369531e-01
-10     sigmar 2.475821e-01
+7      alphan 5.328016e-03
+8      sigman 1.616616e+00
+9      alphar 1.000000e+00
+10     sigmar 2.760290e-01
 11     alphaw 1.000000e+00
-12     sigmaw 1.593538e-05
-13   sigmaRBC 3.327055e+00
-14 sigmaRetic 4.509360e-17
-15    sigmaPd 2.683209e-01
+12     sigmaw 1.846130e-14
+13   sigmaRBC 6.740544e-10
+14 sigmaRetic 6.162374e-38
+15    sigmaPd 1.157278e+00
 > 
 > convergence <- fit$convergence
 > min.fit <- fit$value
@@ -476,5 +476,5 @@ Time difference of 41.35591 mins
 > 
 > 
 > proc.time()
-    user   system  elapsed 
-2212.768  275.148 2484.578 
+     user    system   elapsed 
+32228.502  3912.529 36145.590 

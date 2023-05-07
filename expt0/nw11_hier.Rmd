@@ -319,7 +319,7 @@ po |>
       "sigmaw","sigman","sigmar",
       "sigmaRBC","sigmaPd","sigmaRetic"),
     coefs=coefs,
-    control=list(reltol=1e-4,maxit=1e6)
+    control=list(reltol=1e-8,maxit=1e6)
   ) -> ofun
 
 tic <- Sys.time()
@@ -329,7 +329,7 @@ try(
     par=coef(po,c("alphaw","alphan","alphar",
       "sigmaw","sigman","sigmar",
       "sigmaRBC","sigmaPd","sigmaRetic"),transform=TRUE),
-    control=list(maxit=200,reltol=1e-3,trace=0)
+    control=list(maxit=200,reltol=1e-4,trace=0)
   )
 ) -> fit
 toc <- Sys.time()
