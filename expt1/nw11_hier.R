@@ -161,6 +161,11 @@ dat |>
       ed = logE_A_2-log(rbc*exp(-(exp(logM_A_1)+exp(logN_A_1))/rbc));
       loglik -= lambdaM*md*md + lambdaE*ed*ed;
       // AR(1) individual deviation
+      if (t < 1) {
+        loglik += dnorm(logW_A_1-logW_1,0,sigmaw/sqrt(1-alphaw),1) +
+                  dnorm(logN_A_1-logN_1,0,sigman/sqrt(1-alphan),1) +
+                  dnorm(logR_A_1-logR_1,0,sigmar/sqrt(1-alphar),1);
+      }
       loglik += dnorm(logW_A_2-logW_2,alphaw*(logW_A_1-logW_1),sigmaw,1) +
                 dnorm(logN_A_2-logN_2,alphan*(logN_A_1-logN_1),sigman,1) +
                 dnorm(logR_A_2-logR_2,alphar*(logR_A_1-logR_1),sigmar,1);
@@ -172,6 +177,11 @@ dat |>
       ed = logE_B_2-log(rbc*exp(-(exp(logM_B_1)+exp(logN_B_1))/rbc));
       loglik -= lambdaM*md*md + lambdaE*ed*ed;
       // AR(1) individual deviation
+      if (t < 1) {
+        loglik += dnorm(logW_B_1-logW_1,0,sigmaw/sqrt(1-alphaw),1) +
+                  dnorm(logN_B_1-logN_1,0,sigman/sqrt(1-alphan),1) +
+                  dnorm(logR_B_1-logR_1,0,sigmar/sqrt(1-alphar),1);
+      }
       loglik += dnorm(logW_B_2-logW_2,alphaw*(logW_B_1-logW_1),sigmaw,1) +
                 dnorm(logN_B_2-logN_2,alphan*(logN_B_1-logN_1),sigman,1) +
                 dnorm(logR_B_2-logR_2,alphar*(logR_B_1-logR_1),sigmar,1);
@@ -183,6 +193,11 @@ dat |>
       ed = logE_C_2-log(rbc*exp(-(exp(logM_C_1)+exp(logN_C_1))/rbc));
       loglik -= lambdaM*md*md + lambdaE*ed*ed;
       // AR(1) individual deviation
+      if (t < 1) {
+        loglik += dnorm(logW_C_1-logW_1,0,sigmaw/sqrt(1-alphaw),1) +
+                  dnorm(logN_C_1-logN_1,0,sigman/sqrt(1-alphan),1) +
+                  dnorm(logR_C_1-logR_1,0,sigmar/sqrt(1-alphar),1);
+      }
       loglik += dnorm(logW_C_2-logW_2,alphaw*(logW_C_1-logW_1),sigmaw,1) +
                 dnorm(logN_C_2-logN_2,alphan*(logN_C_1-logN_1),sigman,1) +
                 dnorm(logR_C_2-logR_2,alphar*(logR_C_1-logR_1),sigmar,1);
@@ -296,32 +311,40 @@ create_objfun <- function (
 
 
 ## -----------------------------------------------------------------------------
-po |>
-  create_objfun(
-    est=c("alphaw","alphan","alphar",
-      "sigmaw","sigman","sigmar",
-      "sigmaRBC","sigmaPd","sigmaRetic"),
-    coefs=coefs,
-    control=list(reltol=1e-8,maxit=1e6)
-  ) -> ofun
-
-tic <- Sys.time()
-try(
-  optim(
-    fn=ofun,
-    par=coef(po,c("alphaw","alphan","alphar",
-      "sigmaw","sigman","sigmar",
-      "sigmaRBC","sigmaPd","sigmaRetic"),transform=TRUE),
-    control=list(maxit=500,reltol=1e-4,trace=0)
-  )
-) -> fit
-toc <- Sys.time()
-fit
-toc-tic
-
-save.image(file="nw11_hier.rda")
+stew(
+  file="nw11_hier.rda",{
+    po |>
+      create_objfun(
+        est=c("alphaw","alphan","alphar",
+          "sigmaw","sigman","sigmar",
+          "sigmaRBC","sigmaPd","sigmaRetic"),
+        coefs=coefs,
+        control=list(reltol=1e-8,maxit=1e6)
+      ) -> ofun
+    try({
+      optim(
+        fn=ofun,
+        par=coef(po,c("alphaw","alphan","alphar",
+          "sigmaw","sigman","sigmar",
+          "sigmaRBC","sigmaPd","sigmaRetic"),transform=TRUE),
+        control=list(maxit=500,reltol=1e-4,trace=0)
+      ) -> fit
+      ofun(fit$par)
+    })
+  })
 
 evalq(coef(object),envir=environment(ofun)) |> melt()
+
+evalq(coefs,envir=environment(ofun)) |>
+  melt() |>
+  as_tibble() |>
+  separate(Var1,into=c("name","mouse")) |>
+  mutate(time=time(po)[Var2]) |>
+  select(-Var2) |>
+  ggplot(aes(x=time,y=value,color=mouse,linewidth=is.na(mouse)))+
+  geom_line()+
+  scale_linewidth_manual(values=c(`TRUE`=2,`FALSE`=1))+
+  facet_grid(name~.,scales="free_y")
 
 convergence <- fit$convergence
 min.fit <- fit$value
