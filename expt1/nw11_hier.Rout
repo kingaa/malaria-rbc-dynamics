@@ -236,6 +236,11 @@ dbl (16): Beta, sigmaRBC, sigmaPd, sigmaRetic, lambdaM, lambdaE, sigmaR, sig...
 +       ed = logE_A_2-log(rbc*exp(-(exp(logM_A_1)+exp(logN_A_1))/rbc));
 +       loglik -= lambdaM*md*md + lambdaE*ed*ed;
 +       // AR(1) individual deviation
++       if (t_1 < 1) {
++         loglik += dnorm(logW_A_1-logW_1,0,sigmaw/sqrt(1-alphaw),1) +
++                   dnorm(logN_A_1-logN_1,0,sigman/sqrt(1-alphan),1) +
++                   dnorm(logR_A_1-logR_1,0,sigmar/sqrt(1-alphar),1);
++       }
 +       loglik += dnorm(logW_A_2-logW_2,alphaw*(logW_A_1-logW_1),sigmaw,1) +
 +                 dnorm(logN_A_2-logN_2,alphan*(logN_A_1-logN_1),sigman,1) +
 +                 dnorm(logR_A_2-logR_2,alphar*(logR_A_1-logR_1),sigmar,1);
@@ -247,6 +252,11 @@ dbl (16): Beta, sigmaRBC, sigmaPd, sigmaRetic, lambdaM, lambdaE, sigmaR, sig...
 +       ed = logE_B_2-log(rbc*exp(-(exp(logM_B_1)+exp(logN_B_1))/rbc));
 +       loglik -= lambdaM*md*md + lambdaE*ed*ed;
 +       // AR(1) individual deviation
++       if (t_1 < 1) {
++         loglik += dnorm(logW_B_1-logW_1,0,sigmaw/sqrt(1-alphaw),1) +
++                   dnorm(logN_B_1-logN_1,0,sigman/sqrt(1-alphan),1) +
++                   dnorm(logR_B_1-logR_1,0,sigmar/sqrt(1-alphar),1);
++       }
 +       loglik += dnorm(logW_B_2-logW_2,alphaw*(logW_B_1-logW_1),sigmaw,1) +
 +                 dnorm(logN_B_2-logN_2,alphan*(logN_B_1-logN_1),sigman,1) +
 +                 dnorm(logR_B_2-logR_2,alphar*(logR_B_1-logR_1),sigmar,1);
@@ -258,6 +268,11 @@ dbl (16): Beta, sigmaRBC, sigmaPd, sigmaRetic, lambdaM, lambdaE, sigmaR, sig...
 +       ed = logE_C_2-log(rbc*exp(-(exp(logM_C_1)+exp(logN_C_1))/rbc));
 +       loglik -= lambdaM*md*md + lambdaE*ed*ed;
 +       // AR(1) individual deviation
++       if (t_1 < 1) {
++         loglik += dnorm(logW_C_1-logW_1,0,sigmaw/sqrt(1-alphaw),1) +
++                   dnorm(logN_C_1-logN_1,0,sigman/sqrt(1-alphan),1) +
++                   dnorm(logR_C_1-logR_1,0,sigmar/sqrt(1-alphar),1);
++       }
 +       loglik += dnorm(logW_C_2-logW_2,alphaw*(logW_C_1-logW_1),sigmaw,1) +
 +                 dnorm(logN_C_2-logN_2,alphan*(logN_C_1-logN_1),sigman,1) +
 +                 dnorm(logR_C_2-logR_2,alphar*(logR_C_1-logR_1),sigmar,1);
@@ -373,50 +388,27 @@ argument.
 > 
 > 
 > ## -----------------------------------------------------------------------------
-> po |>
-+   create_objfun(
-+     est=c("alphaw","alphan","alphar",
-+       "sigmaw","sigman","sigmar",
-+       "sigmaRBC","sigmaPd","sigmaRetic"),
-+     coefs=coefs,
-+     control=list(reltol=1e-8,maxit=1e6)
-+   ) -> ofun
-> 
-> tic <- Sys.time()
-> try(
-+   optim(
-+     fn=ofun,
-+     par=coef(po,c("alphaw","alphan","alphar",
-+       "sigmaw","sigman","sigmar",
-+       "sigmaRBC","sigmaPd","sigmaRetic"),transform=TRUE),
-+     control=list(maxit=500,reltol=1e-4,trace=0)
-+   )
-+ ) -> fit
-> toc <- Sys.time()
-> fit
-$par
-      alphaw       alphan       alphar       sigmaw       sigman       sigmar 
- 66.56581161  -5.24699882  69.67068541 -31.96821210   0.38341879  -1.61121202 
-    sigmaRBC      sigmaPd   sigmaRetic 
--21.27179740   0.05432945 -86.18946674 
-
-$value
-[1] -2016.38
-
-$counts
-function gradient 
-     502       NA 
-
-$convergence
-[1] 1
-
-$message
-NULL
-
-> toc-tic
-Time difference of 10.03907 hours
-> 
-> save.image(file="nw11_hier.rda")
+> stew(
++   file="nw11_hier.rda",{
++     po |>
++       create_objfun(
++         est=c("alphaw","alphan","alphar",
++           "sigmaw","sigman","sigmar",
++           "sigmaRBC","sigmaPd","sigmaRetic"),
++         coefs=coefs,
++         control=list(reltol=1e-8,maxit=1e6)
++       ) -> ofun
++     try({
++       optim(
++         fn=ofun,
++         par=coef(po,c("alphaw","alphan","alphar",
++           "sigmaw","sigman","sigmar",
++           "sigmaRBC","sigmaPd","sigmaRetic"),transform=TRUE),
++         control=list(maxit=500,reltol=1e-4,trace=0)
++       ) -> fit
++       ofun(fit$par)
++     })
++   })
 > 
 > evalq(coef(object),envir=environment(ofun)) |> melt()
          name        value
@@ -426,15 +418,29 @@ Time difference of 10.03907 hours
 4      sigmaR 7.500000e-01
 5      sigmaW 7.500000e-01
 6      sigmaN 7.500000e-01
-7      alphan 5.328016e-03
-8      sigman 1.616616e+00
-9      alphar 1.000000e+00
-10     sigmar 2.760290e-01
-11     alphaw 1.000000e+00
-12     sigmaw 1.846130e-14
-13   sigmaRBC 6.740544e-10
-14 sigmaRetic 6.162374e-38
-15    sigmaPd 1.157278e+00
+7      alphan 1.000000e+00
+8      sigman 4.806054e-15
+9      alphar 9.967665e-01
+10     sigmar 5.934160e-01
+11     alphaw 9.999534e-01
+12     sigmaw 1.578551e-02
+13   sigmaRBC 3.371478e-01
+14 sigmaRetic 2.640228e-05
+15    sigmaPd 1.051500e+00
+> 
+> evalq(coefs,envir=environment(ofun)) |>
++   melt() |>
++   as_tibble() |>
++   separate(Var1,into=c("name","mouse")) |>
++   mutate(time=time(po)[Var2]) |>
++   select(-Var2) |>
++   ggplot(aes(x=time,y=value,color=mouse,linewidth=is.na(mouse)))+
++   geom_line()+
++   scale_linewidth_manual(values=c(`TRUE`=2,`FALSE`=1))+
++   facet_grid(name~.,scales="free_y")
+Warning message:
+Expected 2 pieces. Missing pieces filled with `NA` in 105 rows [1, 2, 3, 4, 5,
+21, 22, 23, 24, 25, 41, 42, 43, 44, 45, 61, 62, 63, 64, 65, ...]. 
 > 
 > convergence <- fit$convergence
 > min.fit <- fit$value
@@ -477,4 +483,4 @@ Time difference of 10.03907 hours
 > 
 > proc.time()
      user    system   elapsed 
-32228.502  3912.529 36145.590 
+14466.509  1766.627 16234.209 

@@ -161,7 +161,7 @@ dat |>
       ed = logE_A_2-log(rbc*exp(-(exp(logM_A_1)+exp(logN_A_1))/rbc));
       loglik -= lambdaM*md*md + lambdaE*ed*ed;
       // AR(1) individual deviation
-      if (t < 1) {
+      if (t_1 < 1) {
         loglik += dnorm(logW_A_1-logW_1,0,sigmaw/sqrt(1-alphaw),1) +
                   dnorm(logN_A_1-logN_1,0,sigman/sqrt(1-alphan),1) +
                   dnorm(logR_A_1-logR_1,0,sigmar/sqrt(1-alphar),1);
@@ -177,7 +177,7 @@ dat |>
       ed = logE_B_2-log(rbc*exp(-(exp(logM_B_1)+exp(logN_B_1))/rbc));
       loglik -= lambdaM*md*md + lambdaE*ed*ed;
       // AR(1) individual deviation
-      if (t < 1) {
+      if (t_1 < 1) {
         loglik += dnorm(logW_B_1-logW_1,0,sigmaw/sqrt(1-alphaw),1) +
                   dnorm(logN_B_1-logN_1,0,sigman/sqrt(1-alphan),1) +
                   dnorm(logR_B_1-logR_1,0,sigmar/sqrt(1-alphar),1);
@@ -193,7 +193,7 @@ dat |>
       ed = logE_C_2-log(rbc*exp(-(exp(logM_C_1)+exp(logN_C_1))/rbc));
       loglik -= lambdaM*md*md + lambdaE*ed*ed;
       // AR(1) individual deviation
-      if (t < 1) {
+      if (t_1 < 1) {
         loglik += dnorm(logW_C_1-logW_1,0,sigmaw/sqrt(1-alphaw),1) +
                   dnorm(logN_C_1-logN_1,0,sigman/sqrt(1-alphan),1) +
                   dnorm(logR_C_1-logR_1,0,sigmar/sqrt(1-alphar),1);
