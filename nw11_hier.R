@@ -1,16 +1,13 @@
-## ----setup, include=FALSE-----------------------------------------------------
-knitr::opts_chunk$set(echo = TRUE)
-
-
 ## -----------------------------------------------------------------------------
 library(tidyverse)
 library(stringi)
 library(pomp)
+options(dplyr.summarise.inform=FALSE)
 
 
 ## -----------------------------------------------------------------------------
 read_csv(
-  "../data.csv",
+  "data.csv",
   col_types="iiinnnn"
 ) |>
   mutate(
@@ -58,7 +55,7 @@ stopifnot(!is.na(dat$mouse))
 
 
 ## -----------------------------------------------------------------------------
-read_csv("../po_df_Example9.csv") |>
+read_csv("po_df_Example9.csv") |>
   mutate(
     mouse=case_when(
       mouse=="01"~"A",
@@ -100,7 +97,7 @@ resids |>
 
 
 ## -----------------------------------------------------------------------------
-read_csv("../coef_df_Example9.csv") |>
+read_csv("coef_df_Example9.csv") |>
   mutate(
     mouse=case_when(
       mouse=="01"~"A",
@@ -245,7 +242,7 @@ dat |>
 
 ## -----------------------------------------------------------------------------
 po_df <- read_csv(
-  "../po_df_Example9.csv",
+  "po_df_Example9.csv",
   col_types="nnnnnnnnnncccnnnnnnnnnnn"
 ) |>
   mutate(
@@ -263,6 +260,7 @@ po_df |> pivot_longer(-c(day,mouse)) |>
   mutate(value=exp(value)) |>
   group_by(day,name) |>
   summarise(mean=log(mean(value))) |>
+  ungroup() |>
   pivot_wider(names_from=name,values_from=mean) -> po_avg
 
 po_df |> pivot_longer(-c(day,mouse)) |>
@@ -272,7 +270,6 @@ full_join(po_avg,po_ind,by="day") |>
   ungroup() |>
   select(-day) |>
   t() -> coefs
-
 
 
 ## -----------------------------------------------------------------------------
@@ -312,7 +309,9 @@ create_objfun <- function (
 
 ## -----------------------------------------------------------------------------
 stew(
-  file="nw11_hier.rda",{
+  file="nw11_hier.rda",
+  info=TRUE,
+  {
     po |>
       create_objfun(
         est=c("alphaw","alphan","alphar",
@@ -333,54 +332,26 @@ stew(
     })
   })
 
+
+## -----------------------------------------------------------------------------
 evalq(coef(object),envir=environment(ofun)) |> melt()
 
+
+## -----------------------------------------------------------------------------
 evalq(coefs,envir=environment(ofun)) |>
   melt() |>
   as_tibble() |>
   separate(Var1,into=c("name","mouse")) |>
-  mutate(time=time(po)[Var2]) |>
+  mutate(
+    time=time(po)[Var2],
+    mouse=if_else(is.na(mouse),"GROUP",mouse),
+    value=exp(value)
+    ) |>
   select(-Var2) |>
-  ggplot(aes(x=time,y=value,color=mouse,linewidth=is.na(mouse)))+
+  ggplot(aes(x=time,y=value,color=mouse,linewidth=mouse=="GROUP"))+
   geom_line()+
-  scale_linewidth_manual(values=c(`TRUE`=2,`FALSE`=1))+
-  facet_grid(name~.,scales="free_y")
-
-convergence <- fit$convergence
-min.fit <- fit$value
-
-
-## -----------------------------------------------------------------------------
-## evalq(object,envir=environment(ofun)) -> po
-## 
-## coef(po) |>
-##   as.data.frame() |>
-##   t() |>
-##   as_tibble() |>
-##   mutate(
-##     box="02",
-##     paba="0.005",
-##     lambdaM=1000,
-##     lambdaE=1000,
-##     sigmaR=0.75,
-##     sigmaW=0.75,
-##     sigmaN=0.75,
-##     fit=min.fit,
-##     con=convergence
-##   ) -> coef_df
-## 
-## po |>
-##   as_tibble() |>
-##   mutate(
-##     K=log((exp(R)+exp(E))*(1-exp(-exp(M)/(exp(R)+exp(E))))),
-##     box="02",
-##     paba="0.005",
-##     lambdaM=1000,
-##     lambdaE=1000,
-##     sigmaR=0.75,
-##     sigmaW=0.75,
-##     sigmaN=0.75,
-##     fit=min.fit,
-##     con=convergence
-##   ) -> po_df
+  scale_linewidth_manual(guide="none",values=c(`TRUE`=2,`FALSE`=1))+
+  scale_y_log10()+
+  facet_grid(name~.,scales="free_y")+
+  theme_bw()
 
