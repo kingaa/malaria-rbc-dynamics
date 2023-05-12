@@ -4,7 +4,6 @@ library(stringi)
 library(pomp)
 options(dplyr.summarise.inform=FALSE)
 
-
 ## -----------------------------------------------------------------------------
 read_csv(
   "data.csv",
