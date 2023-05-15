@@ -5,6 +5,8 @@ library(pomp)
 options(dplyr.summarise.inform=FALSE)
 
 ## -----------------------------------------------------------------------------
+setwd("~/Documents/GitHub/bdd/nw11_hier/")
+
 read_csv(
   "data.csv",
   col_types="iiinnnn"
@@ -55,7 +57,7 @@ stopifnot(!is.na(dat$mouse))
 ## -----------------------------------------------------------------------------
 #Pomp object for box 2 (pABA = 0.005)
 dat |>
-  filter(box=="02") |>
+  filter(box=="02",mouse!="C") |>
   select(day,mouse,Retic,RBC,Pd) |>
   filter(day<=20) |>
   pivot_wider(values_from=c(Retic,RBC,Pd),names_from=mouse) |>
@@ -78,12 +80,6 @@ dat |>
       lik += (R_FINITE(Retic_B)) ? dnorm(log(Retic_B),logR_B,sigmaRetic+tweak,1) : 0;
       lik += (R_FINITE(RBC_B)) ? dnorm(log(RBC_B),log(rbc),sigmaRBC+tweak,1) : 0;
       lik += (R_FINITE(Pd_B)) ? dnorm(log(Pd_B),log(K),sigmaPd+tweak,1) : 0;
-      // third mouse
-      rbc = exp(logR_C)+exp(logE_C);
-      K = rbc*(1-exp(-exp(logM_C)/rbc));
-      lik += (R_FINITE(Retic_C)) ? dnorm(log(Retic_C),logR_C,sigmaRetic+tweak,1) : 0;
-      lik += (R_FINITE(RBC_C)) ? dnorm(log(RBC_C),log(rbc),sigmaRBC+tweak,1) : 0;
-      lik += (R_FINITE(Pd_C)) ? dnorm(log(Pd_C),log(K),sigmaPd+tweak,1) : 0;
       if (!give_log) lik = exp(lik);
     }"
     ),
@@ -125,22 +121,6 @@ dat |>
       loglik += dnorm(logW_B_2-logW_2,alphaw*(logW_B_1-logW_1),sigmaw,1) +
                 dnorm(logN_B_2-logN_2,alphan*(logN_B_1-logN_1),sigman,1) +
                 dnorm(logR_B_2-logR_2,alphar*(logR_B_1-logR_1),sigmar,1);
-      // THIRD MOUSE (C):
-      rbc = exp(logR_C_1)+exp(logE_C_1);
-      K = rbc*(1-exp(-exp(logM_C_1)/rbc));
-      // unlawfulness penalty
-      md = logM_C_2-log(Beta*K*exp(-(exp(logW_C_1)+exp(logN_C_1))/rbc));
-      ed = logE_C_2-log(rbc*exp(-(exp(logM_C_1)+exp(logN_C_1))/rbc));
-      loglik -= lambdaM*md*md + lambdaE*ed*ed;
-      // AR(1) individual deviation
-      if (t_1 < 1) {
-        loglik += dnorm(logW_C_1-logW_1,0,sigmaw/sqrt(1-alphaw),1) +
-                  dnorm(logN_C_1-logN_1,0,sigman/sqrt(1-alphan),1) +
-                  dnorm(logR_C_1-logR_1,0,sigmar/sqrt(1-alphar),1);
-      }
-      loglik += dnorm(logW_C_2-logW_2,alphaw*(logW_C_1-logW_1),sigmaw,1) +
-                dnorm(logN_C_2-logN_2,alphan*(logN_C_1-logN_1),sigman,1) +
-                dnorm(logR_C_2-logR_2,alphar*(logR_C_1-logR_1),sigmar,1);
     }"
     ),
     partrans=parameter_trans(
@@ -176,7 +156,7 @@ dat |>
       "logM","logE","logR","logW","logN",
       outer(
         c("logE","logM","logR","logW","logN"),
-        c("A","B","C"),
+        c("A","B"),
         paste,sep="_"
       )
     )
@@ -457,7 +437,7 @@ po_df <- read_csv(
       TRUE~NA_character_
     )
   ) |>
-  filter(box=="02") |>
+  filter(box=="02",mouse!="C") |>
   select(day,mouse,logM=M,logE=E,logR=R,logW=W,logN=N)
 
 po_df |> pivot_longer(-c(day,mouse)) |>
@@ -542,4 +522,119 @@ full_join(po_avg,po_ind,by="day") |>
 
 ## -----------------------------------------------------------------------------
 
-obj_fun <- function(parameters,)
+create_objfun <- function (
+    object1, params1 = coef(object1), coefs1,
+    object2, params2 = coef(object2), coefs2,
+    object3, params3 = coef(object3), coefs3,
+    est,
+    control = list(reltol = 1e-8, maxit = 1e6)
+) {
+  
+  params1 <- partrans(object1,params1,dir="toEst")
+  params2 <- partrans(object2,params2,dir="toEst")
+  params3 <- partrans(object3,params3,dir="toEst")
+  
+  idx <- match(est,names(params1)) #vector of positions
+  
+  ofun <- function (par) {
+    params1[idx] <- par
+    params2[idx] <- par
+    params3[idx] <- par
+    
+    coef(object1,transform=TRUE) <<- params1
+    coef(object2,transform=TRUE) <<- params2
+    coef(object3,transform=TRUE) <<- params3
+    
+    coefs<-rbind(coefs1,coefs2,coefs3)
+    
+    fit <- optim(
+      fn = function (x) {
+        
+        x1<-x[1:15,]
+        x2<-x[16:35,]
+        x3<-x[36:55,]
+        
+        object1@states <<- x1
+        object2@states <<- x2
+        object3@states <<- x3
+        
+        object1 |> dprocess(log=TRUE) |> sum() -> ss1
+        object1 |> dmeasure(log=TRUE) |> sum() -> ll1
+        
+        object2 |> dprocess(log=TRUE) |> sum() -> ss2
+        object2 |> dmeasure(log=TRUE) |> sum() -> ll2
+        
+        object3 |> dprocess(log=TRUE) |> sum() -> ss3
+        object3 |> dmeasure(log=TRUE) |> sum() -> ll3
+        
+        -(ss1+ll1+ss2+ll2+ss3+ll3)
+        
+      },
+      par=coefs,
+      method="BFGS",
+      control=control
+    )
+    coefs <<- fit$par
+    fit$value
+  }
+  environment(ofun) <- list2env(
+    list(object1=object1,params1=params1,coefs1=coefs1,
+         object2=object2,params2=params2,coefs2=coefs2,
+         object3=object3,params3=params3,coefs3=coefs3,
+         idx=idx,control=control),
+    parent=parent.frame(2)
+  )
+  ofun
+}
+
+## -----------------------------------------------------------------------------
+
+stew(
+  file="nw11_hier_joint.rda",
+  info=TRUE,
+  {
+    create_objfun(
+      object1=po02,
+      object2=po03,
+      object3=po04,
+      coefs1=coefs02,
+      coefs2=coefs03,
+      coefs3=coefs04,
+      est=c("alphaw","alphan","alphar",
+            "sigmaw","sigman","sigmar",
+            "sigmaRBC","sigmaPd","sigmaRetic"),
+    ) -> ofun
+    try({
+      optim(
+        fn=ofun,
+        par=coef(po02,c("alphaw","alphan","alphar",
+                        "sigmaw","sigman","sigmar",
+                        "sigmaRBC","sigmaPd","sigmaRetic"),transform=TRUE),
+        control=list(maxit=500,reltol=1e-4,trace=1)
+      ) -> fit
+      ofun(fit$par)
+    })
+  })
+
+evalq(coef(object1),envir=environment(ofun)) |> melt() -> est.coefs02
+est.coefs02$box = "02"
+evalq(coef(object2),envir=environment(ofun)) |> melt() -> est.coefs03
+est.coefs03$box = "03"
+evalq(coef(object3),envir=environment(ofun)) |> melt() -> est.coefs04
+est.coefs04$box = "04"
+
+est.coefs<-bind_rows(est.coefs02,est.coefs03,est.coefs04)
+
+write.csv(est.coefs,"est_coefs_joint.csv",row.names=FALSE)
+
+evalq(coefs,envir=environment(ofun)) |>
+  melt() |>
+  as_tibble() |>
+  separate(Var1,into=c("name","mouse")) |>
+  mutate(
+    time=time(po02)[Var2],
+    mouse=if_else(is.na(mouse),"GROUP",mouse),
+    value=exp(value)
+  ) |>
+  select(-Var2) -> est.po
+write.csv(est.po,"est_po_joint.csv",row.names=FALSE)
