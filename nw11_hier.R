@@ -1,8 +1,11 @@
+.libPaths("~/R/x86_64-pc-linux-gnu-library/4.2/")
+
 ## -----------------------------------------------------------------------------
 library(tidyverse)
 library(stringi)
 library(pomp)
 options(dplyr.summarise.inform=FALSE)
+
 
 ## -----------------------------------------------------------------------------
 read_csv(
@@ -63,7 +66,7 @@ read_csv("po_df_Example9.csv") |>
       TRUE~NA_character_
     )
   ) |>
-  filter(box=="02") |>
+  filter(box=="04") |>
   select(day,mouse,logR=R,logW=W,logN=N) |>
   pivot_longer(-c(day,mouse)) |>
   group_by(day,name) |>
@@ -105,13 +108,13 @@ read_csv("coef_df_Example9.csv") |>
       TRUE~NA_character_
     )
   ) |>
-  filter(box=="02") |>
+  filter(box=="04") |>
   select(mouse,lambdaM,lambdaE,sigmaR,sigmaW,sigmaN,sigmaRBC,sigmaRetic,sigmaPd)
 
 
 ## -----------------------------------------------------------------------------
 dat |>
-  filter(box=="02") |>
+  filter(box=="04") |>
   select(day,mouse,Retic,RBC,Pd) |>
   filter(day<=20) |>
   pivot_wider(values_from=c(Retic,RBC,Pd),names_from=mouse) |>
@@ -211,14 +214,14 @@ dat |>
       )        
     ),
     params=c(
-      Beta=6.09, # fixed for now
+      Beta=4.08, # fixed for now
       lambdaM=1000,lambdaE=1000, # unlawfulness penalty: chosen to be large
       sigmaR=0.75,sigmaW=0.75,sigmaN=0.75, # fixed at these values in example 9
       ## based on example 9 estimates above
-      alphan=0.5,sigman=0.6,
-      alphar=0.8,sigmar=0.25,
-      alphaw=0.85,sigmaw=0.3,
-      sigmaRBC=0.1,sigmaRetic=0.1,sigmaPd=0.6 # chosen to be bigger than needed before
+      alphan=0.2,sigman=0.4,
+      alphar=0.6,sigmar=0.1,
+      alphaw=0.6,sigmaw=0.2,
+      sigmaRBC=0.1,sigmaRetic=0.1,sigmaPd=0.3 # chosen to be bigger than needed before
     ),
     paramnames=c(
       "Beta",
@@ -252,7 +255,7 @@ po_df <- read_csv(
       TRUE~NA_character_
     )
   ) |>
-  filter(box=="02") |>
+  filter(box=="04") |>
   select(day,mouse,logM=M,logE=E,logR=R,logW=W,logN=N)
 
 po_df |> pivot_longer(-c(day,mouse)) |>
@@ -308,7 +311,7 @@ create_objfun <- function (
 
 ## -----------------------------------------------------------------------------
 stew(
-  file="nw11_hier.rda",
+  file="nw11_hier_04.rda",
   info=TRUE,
   {
     po |>
@@ -333,7 +336,9 @@ stew(
 
 
 ## -----------------------------------------------------------------------------
-evalq(coef(object),envir=environment(ofun)) |> melt()
+evalq(coef(object),envir=environment(ofun)) |> melt() -> est.coefs
+print(est.coefs)
+write.csv(est.coefs,"est_coefs_04.csv",row.names=FALSE)
 
 
 ## -----------------------------------------------------------------------------
@@ -346,7 +351,10 @@ evalq(coefs,envir=environment(ofun)) |>
     mouse=if_else(is.na(mouse),"GROUP",mouse),
     value=exp(value)
     ) |>
-  select(-Var2) |>
+  select(-Var2) -> est.po
+ write.csv(est.po,"est_po_04.csv",row.names=FALSE)
+ 
+ est.po |>
   ggplot(aes(x=time,y=value,color=mouse,linewidth=mouse=="GROUP"))+
   geom_line()+
   scale_linewidth_manual(guide="none",values=c(`TRUE`=2,`FALSE`=1))+
