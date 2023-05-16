@@ -2,6 +2,7 @@
 library(tidyverse)
 library(stringi)
 library(pomp)
+library(nloptr)
 options(dplyr.summarise.inform=FALSE)
 
 ## -----------------------------------------------------------------------------
@@ -552,9 +553,14 @@ create_objfun <- function (
     fit1 <- nloptr(
       eval_f = function (x) {
         
-        dim(x)<-dim(coefs1)
-        dimnames(x) <- dimnames(coefs1)
+        #dim(x)<-dim(coefs1)
+        #dimnames(x) <- dimnames(coefs1)
         
+
+	x<-array(data=x,
+		 dim=dim(coefs1),
+		 dimnames=dimnames(coefs1))
+
         object1@states <<- x
         
         object1 |> dprocess(log=TRUE) |> sum() -> ss
@@ -563,16 +569,20 @@ create_objfun <- function (
         -(ss+ll)
         
       },
-      x0=coefs1,
+      x0=c(coefs1),
       opts=opts
     )
     
     fit2 <- nloptr(
       eval_f = function (x) {
         
-        dim(x)<-dim(coefs2)
-        dimnames(x) <- dimnames(coefs2)
+        #dim(x)<-dim(coefs2)
+        #dimnames(x) <- dimnames(coefs2)
         
+        x<-array(data=x,
+		 dim=dim(coefs2),
+		 dimnames=dimnames(coefs2))
+	
         object2@states <<- x
         
         object2 |> dprocess(log=TRUE) |> sum() -> ss
@@ -581,16 +591,20 @@ create_objfun <- function (
         -(ss+ll)
         
       },
-      x0=coefs2,
+      x0=c(coefs2),
       opts=opts
     )
     
     fit3 <- nloptr(
       eval_f = function (x) {
         
-        dim(x)<-dim(coefs3)
-        dimnames(x) <- dimnames(coefs3)
+        #dim(x)<-dim(coefs3)
+        #dimnames(x) <- dimnames(coefs3)
         
+	x<-array(data=x,
+	         dim=dim(coefs3),
+	         dimnames=dimnames(coefs3))
+
         object3@states <<- x
         
         object3 |> dprocess(log=TRUE) |> sum() -> ss
@@ -599,13 +613,19 @@ create_objfun <- function (
         -(ss+ll)
         
       },
-      x0=coefs3,
+      x0=c(coefs3),
       opts=opts
     )
     
-    coefs1 <<- fit1$solution
-    coefs2 <<- fit2$solution
-    coefs3 <<- fit3$solution
+    coefs1 <<- array(fit1$solution,
+		     dim=dim(coefs1),
+		     dimnames=dimnames(coefs1))
+    coefs2 <<- array(fit2$solution,
+		     dim=dim(coefs2),
+		     dimnames=dimnames(coefs2))
+    coefs3 <<- array(fit3$solution,
+		     dim=dim(coefs3),
+		     dimnames=dimnames(coefs3))
     
     fit1$objective+fit2$objective+fit3$objective
   }
@@ -613,7 +633,7 @@ create_objfun <- function (
     list(object1=object1,params1=params1,coefs1=coefs1,
          object2=object2,params2=params2,coefs2=coefs2,
          object3=object3,params3=params3,coefs3=coefs3,
-         idx=idx,opt=opt),
+         idx=idx,opts=opts),
     parent=parent.frame(2)
   )
   ofun
@@ -638,7 +658,8 @@ stew(
     ) -> ofun
     opts<-list("algorithm"="NLOPT_LN_NELDERMEAD",
                "ftol_abs"=10e-2,
-               "maxeval"=1000)
+               "maxeval"=1000,
+               "print_level"=1)
     try({
       fit<-nloptr(
         x0=coef(po02,c("alphaw","alphan","alphar",
