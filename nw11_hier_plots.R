@@ -46,7 +46,7 @@ po_df |>
   facet_grid(name~.,scales="free_y")+
   theme_bw()
 
-po_df |>
+  po_df |>
   filter(mouse=="GROUP") |>
   pivot_wider(names_from="name",values_from="value") |>
   ggplot(aes(x=logR,y=logW,color=pABA))+
@@ -68,4 +68,14 @@ po_df |>
   scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x), 
                 labels=trans_format('log10',math_format(10^.x)))+
   xlab("Indiscriminate killing")+ylab("Targeted killing")+
+  theme_bw()
+
+po_df |>
+  filter(mouse=="GROUP") |>
+  pivot_wider(names_from="name",values_from="value") |>
+  ggplot(aes(x=time,y=logR/logW,color=pABA))+
+  geom_line()+
+  scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x), 
+                labels=trans_format('log10',math_format(10^.x)))+
+  xlab("Days")+ylab("Reticulocyte supply:Targeted killing")+
   theme_bw()
