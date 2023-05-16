@@ -527,7 +527,7 @@ create_objfun <- function (
     object3, params3 = coef(object3), coefs3,
     est,
     opts = list(
-      "algorithm"="NLOPT_LD_LBFGS",
+      "algorithm"="NLOPT_LN_SBPLX",
       "xtol_rel"=1.0e-8,
       "maxeval"=1e6
     )
