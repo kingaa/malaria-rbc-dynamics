@@ -1,10 +1,11 @@
 library(tidyverse)
+library(scales)
 
 setwd("~/Documents/GitHub/bdd/nw11_hier/")
 
-coef02 <- read_csv("est_coefs_02.csv") |>
+coef02 <- read_csv("est_coefs_02_box02.csv") |>
   mutate(box="02")
-po02 <- read_csv("est_po_02.csv") |>
+po02 <- read_csv("est_po_02_box02.csv") |>
   mutate(box="02")
 
 coef03 <- read_csv("est_coefs_03.csv") |>
@@ -43,4 +44,28 @@ po_df |>
   scale_y_log10()+
   xlab("Days")+ylab("Density per microlitre")+
   facet_grid(name~.,scales="free_y")+
+  theme_bw()
+
+po_df |>
+  filter(mouse=="GROUP") |>
+  pivot_wider(names_from="name",values_from="value") |>
+  ggplot(aes(x=logR,y=logW,color=pABA))+
+  geom_path()+
+  scale_x_log10(breaks = trans_breaks("log10", function(x) 10^x), 
+                labels=trans_format('log10',math_format(10^.x)))+
+  scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x), 
+                labels=trans_format('log10',math_format(10^.x)))+
+  xlab("Reticulocyte supply")+ylab("Targeted killing")+
+  theme_bw()
+
+po_df |>
+  filter(mouse=="GROUP") |>
+  pivot_wider(names_from="name",values_from="value") |>
+  ggplot(aes(x=logN,y=logW,color=pABA))+
+  geom_path()+
+  scale_x_log10(breaks = trans_breaks("log10", function(x) 10^x), 
+                labels=trans_format('log10',math_format(10^.x)))+
+  scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x), 
+                labels=trans_format('log10',math_format(10^.x)))+
+  xlab("Indiscriminate killing")+ylab("Targeted killing")+
   theme_bw()
