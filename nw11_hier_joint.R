@@ -5,7 +5,6 @@ library(pomp)
 options(dplyr.summarise.inform=FALSE)
 
 ## -----------------------------------------------------------------------------
-setwd("~/Documents/GitHub/bdd/nw11_hier/")
 
 read_csv(
   "data.csv",
