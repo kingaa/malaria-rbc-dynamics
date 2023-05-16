@@ -549,6 +549,9 @@ create_objfun <- function (
     fit <- optim(
       fn = function (x) {
         
+        dim(x)<-dim(coefs)
+        dimnames(x) <- dimnames(coefs)
+        
         x1<-x[1:15,]
         x2<-x[16:35,]
         x3<-x[36:55,]
