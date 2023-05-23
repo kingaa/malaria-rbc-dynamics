@@ -4,6 +4,8 @@ library(stringi)
 library(pomp)
 options(dplyr.summarise.inform=FALSE)
 
+
+setwd("~/Documents/GitHub/bdd/nw11_hier/")
 ## -----------------------------------------------------------------------------
 
 read_csv(
@@ -526,7 +528,7 @@ create_objfun <- function (
     object2, params2 = coef(object2), coefs2,
     object3, params3 = coef(object3), coefs3,
     est,
-    control = list(reltol = 1e-8, maxit = 1e6)
+    control = list(reltol = 1e-3, maxit = 1e6)
 ) {
   
   params1 <- partrans(object1,params1,dir="toEst")
@@ -552,6 +554,7 @@ create_objfun <- function (
         dimnames(x) <- dimnames(coefs1)
         
         object1@states <<- x
+        
         
         object1 |> dprocess(log=TRUE) |> sum() -> ss
         object1 |> dmeasure(log=TRUE) |> sum() -> ll
