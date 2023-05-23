@@ -6,7 +6,7 @@ library(pomp)
 options(dplyr.summarise.inform=FALSE)
 
 
-setwd("~/Documents/GitHub/bdd/nw11_hier/")
+#setwd("~/Documents/GitHub/bdd/nw11_hier/")
 ## -----------------------------------------------------------------------------
 
 read_csv(
@@ -683,10 +683,10 @@ create_objfun <- function (
     params3[idx] <- par
     params_control[idx_control] <- par[match(est_control,names(par))]
     
-    coef(object1,transform=TRUE) <<- params1
-    coef(object2,transform=TRUE) <<- params2
-    coef(object3,transform=TRUE) <<- params3
-    coef(object_control,transform=TRUE) <<- params_control
+    pomp::coef(object1,transform=TRUE) <<- params1
+    pomp::coef(object2,transform=TRUE) <<- params2
+    pomp::coef(object3,transform=TRUE) <<- params3
+    pomp::coef(object_control,transform=TRUE) <<- params_control
     
     fit1 <- optim(
       fn = function (x) {
@@ -777,7 +777,7 @@ create_objfun <- function (
          object2=object2,params2=params2,coefs2=coefs2,
          object3=object3,params3=params3,coefs3=coefs3,
          object_control=object_control,params_control=params_control,coefs_control=coefs_control,
-         idx=idx,idx_control=idx_control,control=control),
+         idx=idx,idx_control=idx_control,control=control,est_control=est_control),
     parent=parent.frame(2)
   )
   ofun
@@ -786,13 +786,14 @@ create_objfun <- function (
 ## -----------------------------------------------------------------------------
 
 stew(
-  file="nw11_hier_joint_v2.rda",
+  file="nw11_hier_joint_v3.rda",
   info=TRUE,
   {
     create_objfun(
       object1=po02,
       object2=po03,
       object3=po04,
+      object_control=po05,
       coefs1=coefs02,
       coefs2=coefs03,
       coefs3=coefs04,
