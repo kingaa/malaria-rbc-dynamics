@@ -6,7 +6,7 @@ library(pomp)
 options(dplyr.summarise.inform=FALSE)
 
 
-#setwd("~/Documents/GitHub/bdd/nw11_hier/")
+setwd("~/Documents/GitHub/bdd/nw11_hier/")
 ## -----------------------------------------------------------------------------
 read_csv(
   "data.csv",
@@ -70,7 +70,7 @@ dat |>
       double tweak = 0.01;
       lik = 0;
       // first mouse
-      if (t_1 < 9) {
+      if (t < 9) {
         rbc = exp(logR_A)+exp(logE_A);
         K = rbc*(1-exp(-exp(logM_A)/rbc));
         lik += (R_FINITE(Retic_A)) ? dnorm(log(Retic_A),logR_A,sigmaRetic+tweak,1) : 0;
@@ -424,7 +424,7 @@ dat |>
       double tweak = 0.01;
       lik = 0;
       // first mouse
-      if (t_1 < 17) {
+      if (t < 17) {
         rbc = exp(logR_A)+exp(logE_A);
         K = rbc*(1-exp(-exp(logM_A)/rbc));
         lik += (R_FINITE(Retic_A)) ? dnorm(log(Retic_A),logR_A,sigmaRetic+tweak,1) : 0;
@@ -929,10 +929,10 @@ create_objfun <- function (
     coefs1idx <- which(!is.na(coefs1val))
     
     fit1 <- optim(
-      fn = function (x) {
+      fn = function (x,coefs_idx) {
         
         y<-array(data=NA,dim=length(coefs1))
-        y[coefs1idx] <- x
+        y[coefs_idx] <- x
         dim(y) <- dim(coefs1)
         dimnames(y) <- dimnames(coefs1)
         
@@ -945,13 +945,14 @@ create_objfun <- function (
         
       },
       par=c(coefs1)[coefs1idx],
+      coefs_idx=coefs1idx,
       method="BFGS",
       control=control
     )
     
     sol01 <- array(data=NA,dim=length(coefs1))
     sol01[coefs1idx] <- fit1$par
-    dim(sol1) <- dim(coefs1)
+    dim(sol01) <- dim(coefs1)
     
     #Box 02 (pABA = 0.005)
     fit2 <- optim(
@@ -980,10 +981,10 @@ create_objfun <- function (
     coefs3idx <- which(!is.na(coefs3val))
     
     fit3 <- optim(
-      fn = function (x) {
+      fn = function (x,coefs_idx) {
         
         y<-array(data=NA,dim=length(coefs3))
-        y[coefs3idx] <- x
+        y[coefs_idx] <- x
         dim(y) <- dim(coefs3)
         dimnames(y) <- dimnames(coefs3)
         
@@ -996,23 +997,24 @@ create_objfun <- function (
         
       },
       par=c(coefs3)[coefs3idx],
+      coefs_idx=coefs3idx,
       method="BFGS",
       control=control
     )
     
     sol03 <- array(data=NA,dim=length(coefs3))
     sol03[coefs3idx] <- fit3$par
-    dim(sol3) <- dim(coefs3)
+    dim(sol03) <- dim(coefs3)
     
     #Box 04 (pABA = 0)
     coefs4val <- c(coefs4)
     coefs4idx <- which(!is.na(coefs4val))
     
     fit4 <- optim(
-      fn = function (x) {
+      fn = function (x,coefs_idx) {
         
         y<-array(data=NA,dim=length(coefs4))
-        y[coefs4idx] <- x
+        y[coefs_idx] <- x
         dim(y) <- dim(coefs4)
         dimnames(y) <- dimnames(coefs4)
         
@@ -1025,13 +1027,14 @@ create_objfun <- function (
         
       },
       par=c(coefs4)[coefs4idx],
+      coefs_idx=coefs4idx,
       method="BFGS",
       control=control
     )
     
     sol04 <- array(data=NA,dim=length(coefs4))
     sol04[coefs4idx] <- fit4$par
-    dim(sol4) <- dim(coefs4)
+    dim(sol04) <- dim(coefs4)
     
     #Box 05 (control)
     fit_control <- optim(
@@ -1070,7 +1073,6 @@ create_objfun <- function (
          object4=object4,params4=params4,coefs4=coefs4,
          object_control=object_control,params_control=params_control,coefs_control=coefs_control,
          idx=idx,idx_control=idx_control,
-         coefs1idx=coefs1idx,coefs3idx=coefs3idx,coefs4idx=coefs4idx,
          control=control,est_control=est_control),
     parent=parent.frame(2)
   )
