@@ -942,7 +942,7 @@ create_objfun <- function (
         object1 |> dmeasure(log=TRUE) |> sum() -> ll
         
         -(ss+ll)
-        
+       
       },
       par=c(coefs1)[coefs1idx],
       coefs_idx=coefs1idx,
@@ -953,6 +953,7 @@ create_objfun <- function (
     sol01 <- array(data=NA,dim=length(coefs1))
     sol01[coefs1idx] <- fit1$par
     dim(sol01) <- dim(coefs1)
+    dimnames(sol01) <- dimnames(coefs1)
     
     #Box 02 (pABA = 0.005)
     fit2 <- optim(
@@ -975,6 +976,7 @@ create_objfun <- function (
     )
     
     sol02 <- fit2$par
+    dimnames(sol02) <- dimnames(coefs2)
     
     #Box 03 (pABA = 0.0005)
     coefs3val <- c(coefs3)
@@ -1005,6 +1007,7 @@ create_objfun <- function (
     sol03 <- array(data=NA,dim=length(coefs3))
     sol03[coefs3idx] <- fit3$par
     dim(sol03) <- dim(coefs3)
+    dimnames(sol03) <- dimnames(coefs3)
     
     #Box 04 (pABA = 0)
     coefs4val <- c(coefs4)
@@ -1035,6 +1038,7 @@ create_objfun <- function (
     sol04 <- array(data=NA,dim=length(coefs4))
     sol04[coefs4idx] <- fit4$par
     dim(sol04) <- dim(coefs4)
+    dimnames(sol04) <- dimnames(coefs4)
     
     #Box 05 (control)
     fit_control <- optim(
@@ -1057,6 +1061,7 @@ create_objfun <- function (
     )
     
     sol_control <- fit_control$par
+    dimnames(sol_control) <- dimnames(coefs_control)
     
     coefs1 <<- sol01
     coefs2 <<- sol02
