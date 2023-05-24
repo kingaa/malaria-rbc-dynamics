@@ -3,8 +3,8 @@ library(scales)
 
 setwd("~/Documents/GitHub/bdd/nw11_hier/")
 
-coef_df <- read_csv("est_coefs_joint.csv")
-po_df <- read_csv("est_po_joint.csv") |>
+coef_df <- read_csv("est_coefs_joint_v3.csv")
+po_df <- read_csv("est_po_joint_v3.csv") |>
   mutate(pABA=case_match(
     box,
     "01"~"0.05",
