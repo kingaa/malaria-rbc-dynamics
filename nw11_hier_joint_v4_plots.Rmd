@@ -1,0 +1,390 @@
+---
+title: "n11_hier_joint_plots"
+author: "Madeline Peters, Aaron King"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Load required packages
+
+```{r packages}
+library(tidyverse)
+library(scales)
+```
+
+## Set working directory
+
+```{r directory}
+setwd("~/Documents/GitHub/bdd/nw11_hier/")
+```
+
+## Load data
+
+```{r data}
+##Read in data
+read_csv(
+  "data.csv",
+  col_types="iiinnnn"
+) |>
+  mutate(
+    mouseid=sprintf("%02d-%02d",box,mouse),
+    box=sprintf("%02d",box),
+    mouse=sprintf("%02d",mouse),
+    paba=as.factor(box),
+    rbc_density=rbc_density/1000,
+    paba=case_match(
+      paba,
+      "01"~"0.05",
+      "02"~"0.005",
+      "03"~"0.0005",
+      "04"~"0",
+      "05"~"control"
+    )
+  ) |>
+  select(
+    day,
+    mouseid,
+    paba,
+    box,
+    mouse,
+    Pd=ama_density,
+    RBC=rbc_density,
+    Ter119=ter119_density,
+    CD71=cd71_density
+  ) |>
+  arrange(mouseid,day) |>
+  mutate(
+    paba=as.character(paba),
+    Ter119=if_else(Ter119==0,NA_real_,Ter119),
+    CD71=if_else(CD71==0,NA_real_,CD71),
+    Eryth=(1-CD71/Ter119)*RBC,
+    Retic=CD71/Ter119*RBC,
+    mouse=case_when(
+      mouse=="01"~"A",
+      mouse=="02"~"B",
+      mouse=="03"~"C",
+      TRUE~NA_character_
+    )
+  ) -> data_full
+```
+
+## Load fits
+
+```{r fits}
+coef_df <- read_csv("est_coefs_joint_v4.csv")
+po_df <- read_csv("est_po_joint_v4.csv") |>
+  mutate(pABA=case_match(
+    box,
+    "01"~"0.05",
+    "02"~"0.005",
+    "03"~"0.0005",
+    "04"~"0",
+    "05"~"control"
+  ))
+
+```
+## Parameter estimates
+
+```{r fits}
+coef_df |> select(-box) |> unique()
+```
+
+## Plot model results
+
+```{r results}
+po_df |> pivot_wider(names_from=name,values_from=value) |>
+  mutate(RBC=logE+logR) |>
+  select(mouse,time,box,pABA,E=logE,M=logM,N=logN,R=logR,W=logW,RBC) |>
+  pivot_longer(-c(mouse,time,box,pABA)) |>
+  ggplot(aes(x=time,y=value,color=mouse,linewidth=mouse=="GROUP"))+
+  geom_line()+
+  scale_linewidth_manual(guide="none",values=c(`TRUE`=2,`FALSE`=1))+
+  scale_y_log10()+
+  xlab("Days")+ylab("Density per microlitre")+
+  facet_grid(name~pABA,scales="free_y")+
+  theme_bw()+
+  theme(
+    strip.background = element_blank()
+  )
+```
+
+## Compare model results to data
+
+```{r comparison}
+po_df |>
+  filter(mouse!="GROUP",name%in%c("logE","logR","logM")) |>
+  pivot_wider(names_from=name,values_from=value) |>
+  mutate(K=(logR+logE)*(1-exp(-logM/(logR+logE))),
+         RBC=logR+logE) |>
+  select(time,mouse,box,pABA,RBC,Retic=logR,Pd=K,Eryth=logE) |>
+  unite("ID",c(time,box,mouse),sep="_",remove=F) -> fits
+
+data_full |>
+  select(time=day,pABA=paba,box,mouse,Pd,RBC,Retic,Eryth) |>
+  unite("ID",c(time,box,mouse),sep="_",remove=F) -> data
+
+data <- slice(data,which(data$ID%in%fits$ID))
+
+fits |> pivot_longer(-c(ID,time,mouse,box,pABA)) -> fits
+data |> pivot_longer(-c(ID,time,mouse,box,pABA)) -> data
+  
+ggplot()+
+  geom_point(data=data,aes(x=time,y=value,col=name))+
+  geom_line(data=fits,aes(x=time,y=value,col=name))+
+  facet_grid(pABA~mouse)+
+  scale_y_log10()+
+  xlab("Day")+ylab("Density per microlitre")+
+  theme_bw()+
+  theme(strip.background=element_blank(),
+        legend.title=element_blank(),
+        panel.grid = element_blank()
+        )
+
+ggplot()+
+  geom_point(data=data |> filter(pABA=="control"),aes(x=time,y=value,col=name))+
+  geom_line(data=fits |> filter(pABA=="control"),aes(x=time,y=value,col=name))+
+  facet_grid(name~mouse,scales="free_y")+
+  scale_y_log10()+
+  xlab("Day")+ylab("Density per microlitre")+
+  theme_bw()+
+  theme(strip.background=element_blank(),
+        legend.title=element_blank(),
+        panel.grid = element_blank()
+        )
+```
+
+## Plot group level time series
+
+```{r group}
+po_df |>
+  filter(mouse=="GROUP") |>
+  pivot_wider(names_from=name,values_from=value) |>
+  mutate(K=(logR+logE)*(1-exp(-logM/(logR+logE))),
+         RBC=logR+logE) |>
+  select(time,mouse,box,pABA,RBC,E=logE,R=logR,K,N=logN,W=logW) |>
+  pivot_longer(-c(time,mouse,box,pABA)) -> group.fits
+
+group.fits$name <- factor(group.fits$name,levels=c("RBC","E","R","N","W","K"))
+
+group.fits |>
+  ggplot(aes(x=time,y=value,color=pABA))+
+  geom_line(linewidth=2)+
+  scale_y_log10()+
+  xlab("Days")+ylab("Density per microlitre")+
+  facet_grid(name~.,scales="free_y")+
+  theme_bw()+
+  theme(strip.background=element_blank(),
+        panel.grid = element_blank()
+        )
+
+group.fits |>
+  filter(pABA!="control",name%in%c("R","N","W")) |>
+  ggplot(aes(x=time,y=value,color=pABA))+
+  geom_line(linewidth=2)+
+  scale_y_log10()+
+  xlab("Days")+ylab("Density per microlitre")+
+  facet_grid(.~name,scales="free_y")+
+  theme_bw()+
+  theme(strip.background=element_blank(),
+        panel.grid = element_blank()
+        )
+
+group.fits |>
+  filter(pABA!="control",name%in%c("R","E")) |>
+  ggplot(aes(x=time,y=value,color=pABA))+
+  geom_line(linewidth=2)+
+  scale_y_log10()+
+  xlab("Days")+ylab("Density per microlitre")+
+  facet_grid(.~name,scales="free_y")+
+  theme_bw()+
+  theme(strip.background=element_blank(),
+        panel.grid = element_blank()
+        )
+```
+
+## Plot swirlies
+
+```{r swirlies}
+po_df |>
+  filter(mouse=="GROUP") |>
+  pivot_wider(names_from=name,values_from=value) |>
+  mutate(K=(logR+logE)*(1-exp(-logM/(logR+logE))),
+         RBC=logR+logE) |>
+  select(time,mouse,box,pABA,RBC,E=logE,R=logR,K,N=logN,W=logW) -> swirls
+
+swirls |>
+  ggplot(aes(x=K,y=W,color=pABA))+
+  geom_path(linewidth=2)+
+  geom_text(aes(label=time),col="black",size=5)+
+  scale_x_log10()+scale_y_log10()+
+  xlab("Parasite density")+ylab("Targeted killing")+
+  theme_bw()+
+  theme(
+        panel.grid = element_blank()
+        )
+
+swirls |>
+  ggplot(aes(x=R,y=W,color=pABA))+
+  geom_path(linewidth=2)+
+  geom_text(aes(label=time),col="black",size=5)+
+  scale_x_log10()+scale_y_log10()+
+  xlab("Reticulocyte supply")+ylab("Targeted killing")+
+  theme_bw()+
+  theme(
+        panel.grid = element_blank()
+        )
+
+swirls |>
+  ggplot(aes(x=R,y=N,color=pABA))+
+  geom_path(linewidth=2)+
+  geom_text(aes(label=time),col="black",size=5)+
+  scale_x_log10()+scale_y_log10()+
+  xlab("Reticulocyte supply")+ylab("Indiscriminate killing")+
+  theme_bw()+
+  theme(
+        panel.grid = element_blank()
+        )
+
+swirls |>
+  ggplot(aes(x=W,y=N,color=pABA))+
+  geom_path(linewidth=2)+
+  geom_text(aes(label=time),col="black",size=5)+
+  scale_x_log10()+scale_y_log10()+
+  xlab("Targeted killing")+ylab("Indiscriminate killing")+
+  theme_bw()+
+  theme(
+        panel.grid = element_blank()
+        )
+```
+
+## Plot reticulocytes (t+1) versus erythrocytes (t)
+```{r RversusE}
+ggplot()+
+  geom_path(data=swirls|>filter(pABA=="0.05"),aes(x=E,y=lead(R),color=pABA),linewidth=2)+
+  geom_path(data=swirls|>filter(pABA=="0.005"),aes(x=E,y=lead(R),color=pABA),linewidth=2)+
+  geom_path(data=swirls|>filter(pABA=="0.0005"),aes(x=E,y=lead(R),color=pABA),linewidth=2)+
+  geom_path(data=swirls|>filter(pABA=="0"),aes(x=E,y=lead(R),color=pABA),linewidth=2)+
+  geom_text(data=swirls|>filter(pABA=="0.05"),aes(x=E,y=lead(R),label=time),col="black",size=5)+
+  geom_text(data=swirls|>filter(pABA=="0.005"),aes(x=E,y=lead(R),label=time),col="black",size=5)+
+  geom_text(data=swirls|>filter(pABA=="0.0005"),aes(x=E,y=lead(R),label=time),col="black",size=5)+
+  geom_text(data=swirls|>filter(pABA=="0"),aes(x=E,y=lead(R),label=time),col="black",size=5)+
+  scale_x_log10()+scale_y_log10()+
+  xlab("Erythrocytes (t)")+ylab("Reticulocytes (t+1)")+
+  theme_bw()+
+  theme(
+        panel.grid = element_blank()
+        )
+
+ggplot()+
+  geom_path(data=swirls|>filter(pABA=="0.05"),aes(x=RBC,y=lead(R),color=pABA),linewidth=2)+
+  geom_path(data=swirls|>filter(pABA=="0.005"),aes(x=RBC,y=lead(R),color=pABA),linewidth=2)+
+  geom_path(data=swirls|>filter(pABA=="0.0005"),aes(x=RBC,y=lead(R),color=pABA),linewidth=2)+
+  geom_path(data=swirls|>filter(pABA=="0"),aes(x=RBC,y=lead(R),color=pABA),linewidth=2)+
+  geom_text(data=swirls|>filter(pABA=="0.05"),aes(x=RBC,y=lead(R),label=time),col="black",size=5)+
+  geom_text(data=swirls|>filter(pABA=="0.005"),aes(x=RBC,y=lead(R),label=time),col="black",size=5)+
+  geom_text(data=swirls|>filter(pABA=="0.0005"),aes(x=RBC,y=lead(R),label=time),col="black",size=5)+
+  geom_text(data=swirls|>filter(pABA=="0"),aes(x=RBC,y=lead(R),label=time),col="black",size=5)+
+  scale_x_log10()+scale_y_log10()+
+  xlab("Total RBCs (t)")+ylab("Reticulocytes (t+1)")+
+  theme_bw()+
+  theme(
+        panel.grid = element_blank()
+        )
+
+ggplot()+
+  geom_text(data=swirls|>filter(pABA=="0.05"),aes(x=E,y=lead(R),color=pABA,label=time),size=5)+
+  geom_text(data=swirls|>filter(pABA=="0.005"),aes(x=E,y=lead(R),color=pABA,label=time),size=5)+
+  geom_text(data=swirls|>filter(pABA=="0.0005"),aes(x=E,y=lead(R),color=pABA,label=time),size=5)+
+  geom_text(data=swirls|>filter(pABA=="0"),aes(x=E,y=lead(R),color=pABA,label=time),size=5)+
+  xlab("Erythrocytes (t)")+ylab("Reticulocytes (t+1)")+
+  theme_bw()+
+  theme(
+        panel.grid = element_blank()
+        )
+
+ggplot()+
+  geom_text(data=swirls|>filter(pABA=="0.05"),aes(x=log(E),y=lead(log(R)),color=pABA,label=time),size=5)+
+  geom_text(data=swirls|>filter(pABA=="0.005"),aes(x=log(E),y=lead(log(R)),color=pABA,label=time),size=5)+
+  geom_text(data=swirls|>filter(pABA=="0.0005"),aes(x=log(E),y=lead(log(R)),color=pABA,label=time),size=5)+
+  geom_text(data=swirls|>filter(pABA=="0"),aes(x=log(E),y=lead(log(R)),color=pABA,label=time),size=5)+
+  xlab("log Erythrocytes (t)")+ylab("log Reticulocytes (t+1)")+
+  theme_bw()+
+  theme(
+        panel.grid = element_blank()
+        )
+
+ggplot()+
+  geom_text(data=swirls|>filter(pABA=="0.05"),aes(x=RBC,y=lead(R),color=pABA,label=time),size=5)+
+  geom_text(data=swirls|>filter(pABA=="0.005"),aes(x=RBC,y=lead(R),color=pABA,label=time),size=5)+
+  geom_text(data=swirls|>filter(pABA=="0.0005"),aes(x=RBC,y=lead(R),color=pABA,label=time),size=5)+
+  geom_text(data=swirls|>filter(pABA=="0"),aes(x=RBC,y=lead(R),color=pABA,label=time),size=5)+
+  xlab("Total RBCs (t)")+ylab("Reticulocytes (t+1)")+
+  theme_bw()+
+  theme(
+        panel.grid = element_blank()
+        )
+
+ggplot()+
+  geom_text(data=swirls|>filter(pABA=="0.05",time<=6),aes(x=E,y=lead(R),color=pABA,label=time),size=5)+
+  geom_text(data=swirls|>filter(pABA=="0.005",time<=6),aes(x=E,y=lead(R),color=pABA,label=time),size=5)+
+  geom_text(data=swirls|>filter(pABA=="0.0005",time<=6),aes(x=E,y=lead(R),color=pABA,label=time),size=5)+
+  geom_text(data=swirls|>filter(pABA=="0",time<=6),aes(x=E,y=lead(R),color=pABA,label=time),size=5)+
+  xlab("Erythrocytes (t)")+ylab("Reticulocytes (t+1)")+
+  theme_bw()+
+  ggtitle("Through peak parasitaemia")+
+  theme(
+        panel.grid = element_blank()
+        )
+
+ggplot()+
+  geom_text(data=swirls|>filter(pABA=="0.05",time>6),aes(x=E,y=lead(R),color=pABA,label=time),size=5)+
+  geom_text(data=swirls|>filter(pABA=="0.005",time>6),aes(x=E,y=lead(R),color=pABA,label=time),size=5)+
+  geom_text(data=swirls|>filter(pABA=="0.0005",time>6),aes(x=E,y=lead(R),color=pABA,label=time),size=5)+
+  geom_text(data=swirls|>filter(pABA=="0",time>6),aes(x=E,y=lead(R),color=pABA,label=time),size=5)+
+  xlab("Erythrocytes (t)")+ylab("Reticulocytes (t+1)")+
+  theme_bw()+
+  ggtitle("Post peak parasitaemia")+
+  theme(
+        panel.grid = element_blank()
+        )
+
+ggplot()+
+  geom_text(data=swirls,aes(x=E,y=lead(R),color=pABA,label=time),size=5)+
+  xlab("Erythrocytes (t)")+ylab("Reticulocytes (t+1)")+
+  theme_bw()+
+  facet_wrap(pABA~.)+
+  theme(
+        panel.grid = element_blank()
+        )
+
+ggplot()+
+  geom_smooth(data=swirls,aes(x=E,y=lead(R),color=pABA))+
+  xlab("Erythrocytes (t)")+ylab("Reticulocytes (t+1)")+
+  theme_bw()+
+  theme(
+        panel.grid = element_blank()
+        )
+```
+
+```{r swirlies2}
+po_df |>
+  pivot_wider(names_from=name,values_from=value) |>
+  mutate(K=(logR+logE)*(1-exp(-logM/(logR+logE))),
+         RBC=logR+logE) |>
+  select(time,mouse,box,paba=pABA,RBC,E=logE,R=logR,K,N=logN,W=logW) -> swirls2
+
+ggplot()+
+  geom_point(data=data_full |>filter(day<=20,paba!="control",paba!="0.05"),aes(x=day,y=Retic,col=mouse))+
+  geom_line(data=swirls2 |> filter(mouse!="GROUP",paba!="control",paba!="0.05"),aes(x=time,y=R,col=mouse))+
+  xlab("Day")+ylab("Reticulocyte supply")+
+  facet_grid(paba~.)+
+  theme_bw()+
+  scale_y_log10()+
+  theme(
+        panel.grid = element_blank()
+        )
+```
