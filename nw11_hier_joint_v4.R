@@ -6,7 +6,7 @@ library(pomp)
 options(dplyr.summarise.inform=FALSE)
 
 
-setwd("~/Documents/GitHub/bdd/nw11_hier/")
+#setwd("~/Documents/GitHub/bdd/nw11_hier/")
 ## -----------------------------------------------------------------------------
 read_csv(
   "data.csv",
@@ -1021,7 +1021,7 @@ create_objfun <- function (
         dim(y) <- dim(coefs4)
         dimnames(y) <- dimnames(coefs4)
         
-        object4@states <- y
+        object4@states <<- y
         
         object4 |> dprocess(log=TRUE) |> sum() -> ss
         object4 |> dmeasure(log=TRUE) |> sum() -> ll
@@ -1144,7 +1144,7 @@ evalq(coefs1,envir=environment(ofun)) |>
     time=time(po02)[Var2],
     mouse=if_else(is.na(mouse),"GROUP",mouse),
     value=exp(value),
-    box="02"
+    box="01"
   ) |>
   select(-Var2) -> est.po01
 
