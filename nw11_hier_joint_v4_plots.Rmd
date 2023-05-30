@@ -75,8 +75,8 @@ read_csv(
 ## Load fits
 
 ```{r fits}
-coef_df <- read_csv("est_coefs_joint_v4.csv")
-po_df <- read_csv("est_po_joint_v4.csv") |>
+coef_df <- read_csv("est_coefs_joint_v5.csv")
+po_df <- read_csv("est_po_joint_v5.csv") |>
   mutate(pABA=case_match(
     box,
     "01"~"0.05",
@@ -194,11 +194,40 @@ group.fits |>
         )
 
 group.fits |>
-  filter(pABA!="control",name%in%c("R","E")) |>
+  filter(name%in%c("R","E")) |>
   ggplot(aes(x=time,y=value,color=pABA))+
   geom_line(linewidth=2)+
   scale_y_log10()+
   xlab("Days")+ylab("Density per microlitre")+
+  facet_grid(.~name,scales="free_y")+
+  theme_bw()+
+  theme(strip.background=element_blank(),
+        panel.grid = element_blank()
+        )
+
+group.fits |> filter(pABA%in%c("0"),name%in%c("K")) -> tmp
+peak.day <- tmp$time[which(tmp$value==max(tmp$value))]
+
+group.fits |>
+  filter(pABA%in%c("control","0"),name%in%c("R","E")) |>
+  ggplot(aes(x=time,y=value,color=pABA))+
+  geom_line(linewidth=2)+
+  geom_vline(xintercept=peak.day,linetype="dashed",col="grey")+
+  scale_y_log10()+
+  xlab("Day")+ylab("Density per microlitre")+
+  facet_grid(.~name,scales="free_y")+
+  theme_bw()+
+  theme(strip.background=element_blank(),
+        panel.grid = element_blank()
+        )
+
+group.fits |>
+  filter(name%in%c("R","E")) |>
+  ggplot(aes(x=time,y=value,color=pABA))+
+  geom_line(linewidth=1)+
+  geom_vline(xintercept=peak.day,linetype="dashed",col="grey")+
+  scale_y_log10()+
+  xlab("Day")+ylab("Density per microlitre")+
   facet_grid(.~name,scales="free_y")+
   theme_bw()+
   theme(strip.background=element_blank(),
@@ -370,20 +399,24 @@ ggplot()+
         )
 ```
 
-```{r swirlies2}
-po_df |>
-  pivot_wider(names_from=name,values_from=value) |>
-  mutate(K=(logR+logE)*(1-exp(-logM/(logR+logE))),
-         RBC=logR+logE) |>
-  select(time,mouse,box,paba=pABA,RBC,E=logE,R=logR,K,N=logN,W=logW) -> swirls2
+```{r pABA0}
+ggplot()+
+  geom_path(data=swirls,aes(x=E,y=R,color=pABA),linewidth=2)+
+  geom_text(data=swirls,aes(x=E,y=R,label=time),col="black",size=5)+
+  xlab("Erythrocytes")+ylab("Reticulocytes")+
+  theme_bw()+
+  scale_x_log10()+scale_y_log10()+
+  facet_wrap(pABA~.)+
+  theme(
+        panel.grid = element_blank()
+        )
 
 ggplot()+
-  geom_point(data=data_full |>filter(day<=20,paba!="control",paba!="0.05"),aes(x=day,y=Retic,col=mouse))+
-  geom_line(data=swirls2 |> filter(mouse!="GROUP",paba!="control",paba!="0.05"),aes(x=time,y=R,col=mouse))+
-  xlab("Day")+ylab("Reticulocyte supply")+
-  facet_grid(paba~.)+
+  geom_path(data=swirls,aes(x=E,y=R,color=pABA),linewidth=2)+
+  geom_text(data=swirls,aes(x=E,y=R,label=time),col="black",size=5)+
+  xlab("Erythrocytes")+ylab("Reticulocytes")+
   theme_bw()+
-  scale_y_log10()+
+  facet_wrap(pABA~.)+
   theme(
         panel.grid = element_blank()
         )
