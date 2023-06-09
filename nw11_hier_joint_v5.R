@@ -6,7 +6,7 @@ library(pomp)
 options(dplyr.summarise.inform=FALSE)
 
 
-#setwd("~/Documents/GitHub/bdd/nw11_hier/")
+setwd("~/Documents/GitHub/bdd/nw11_hier/")
 ## -----------------------------------------------------------------------------
 read_csv(
   "data.csv",
@@ -88,7 +88,7 @@ dat |>
     ),
     dprocess=Csnippet(r"{
       double rbc, K, md, ed;
-      tweak2 = 0.0001;
+      double tweak2 = 0.0001;
       // GAUSSIAN MARKOV RF MODEL:
       loglik = dnorm(logR_2,logR_1,sigmaR,1) +
                dnorm(logN_2,logN_1,sigmaN,1) +
@@ -199,7 +199,7 @@ dat |>
     ),
     dprocess=Csnippet(r"{
       double rbc, K, md, ed;
-      tweak2 = 0.0001;
+      double tweak2 = 0.0001;
       // GAUSSIAN MARKOV RF MODEL:
       loglik = dnorm(logR_2,logR_1,sigmaR,1) +
                dnorm(logN_2,logN_1,sigmaN,1) +
@@ -257,7 +257,7 @@ dat |>
       alphan=0.5,sigman=0.6,
       alphar=0.8,sigmar=0.25,
       alphaw=0.85,sigmaw=0.3,
-      sigmaRBC=0.1,sigmaRetic=0.1,sigmaPd=0.6 # chosen to be bigger than needed before
+      sigmaRBC=0.1,sigmaRetic=0.1,sigmaPd=0.2 # chosen to be bigger than needed before
     ),
     paramnames=c(
       "Beta",
@@ -483,7 +483,7 @@ dat |>
       loglik -= lambdaM*md*md + lambdaE*ed*ed;
       // AR(1) individual deviation
       if (t_1 < 1) {
-        loglik += dnorm(logW_B_1-logW_1,0,sigmaw/sqrt(1(alphaw-tweak2)),1) +
+        loglik += dnorm(logW_B_1-logW_1,0,sigmaw/sqrt(1-(alphaw-tweak2)),1) +
                   dnorm(logN_B_1-logN_1,0,sigman/sqrt(1-(alphan-tweak2)),1) +
                   dnorm(logR_B_1-logR_1,0,sigmar/sqrt(1-(alphar-tweak2)),1);
       }
@@ -577,7 +577,7 @@ dat |>
     ),
     dprocess=Csnippet(r"{
       double rbc, ed;
-      tweak2 = 0.0001;
+      double tweak2 = 0.0001;
       // GAUSSIAN MARKOV RF MODEL:
       loglik = dnorm(logR_2,logR_1,sigmaR,1) +
                dnorm(logN_2,logN_1,sigmaN,1);
@@ -605,6 +605,18 @@ dat |>
       }
       loglik += dnorm(logN_B_2-logN_2,(alphan-tweak2)*(logN_B_1-logN_1),sigman,1) +
                 dnorm(logR_B_2-logR_2,(alphar-tweak2)*(logR_B_1-logR_1),sigmar,1);
+      // THIRD MOUSE (C):
+      rbc = exp(logR_C_1)+exp(logE_C_1);
+      // unlawfulness penalty
+      ed = logE_C_2-log(rbc*exp(-(exp(logN_C_1))/rbc));
+      loglik -= lambdaE*ed*ed;
+      // AR(1) individual deviation
+      if (t_1 < 1) {
+        loglik += dnorm(logN_C_1-logN_1,0,sigman/sqrt(1-(alphan-tweak2)),1) +
+                  dnorm(logR_C_1-logR_1,0,sigmar/sqrt(1-(alphar-tweak2)),1);
+      }
+      loglik += dnorm(logN_C_2-logN_2,(alphan-tweak2)*(logN_C_1-logN_1),sigman,1) +
+                dnorm(logR_C_2-logR_2,(alphar-tweak2)*(logR_C_1-logR_1),sigmar,1);
     }"
     ),
     partrans=parameter_trans(
@@ -1088,7 +1100,7 @@ create_objfun <- function (
 ## -----------------------------------------------------------------------------
 
 stew(
-  file="nw11_hier_joint_v5.rda",
+  file="nw11_hier_joint_PdFixed.rda",
   info=TRUE,
   {
     create_objfun(
@@ -1104,7 +1116,7 @@ stew(
       coefs_control=coefs05,
       est=c("alphaw","alphan","alphar",
             "sigmaw","sigman","sigmar",
-            "sigmaRBC","sigmaPd","sigmaRetic"),
+            "sigmaRBC","sigmaRetic"),
       est_control=c("alphar","alphan",
             "sigmar","sigman",
             "sigmaRBC","sigmaRetic"),
@@ -1114,7 +1126,7 @@ stew(
         fn=ofun,
         par=coef(po02,c("alphaw","alphan","alphar",
                         "sigmaw","sigman","sigmar",
-                        "sigmaRBC","sigmaPd","sigmaRetic"),transform=TRUE),
+                        "sigmaRBC","sigmaRetic"),transform=TRUE),
         control=list(maxit=3000,reltol=1e-4,trace=1)
       ) -> fit
       ofun(fit$par)
@@ -1135,7 +1147,7 @@ est.coefs05$box = "05"
 
 est.coefs<-bind_rows(est.coefs01,est.coefs02,est.coefs03,est.coefs04,est.coefs05)
 
-write.csv(est.coefs,"est_coefs_joint_v5.csv",row.names=FALSE)
+write.csv(est.coefs,"est_coefs_joint_PdFixed.csv",row.names=FALSE)
 
 evalq(coefs1,envir=environment(ofun)) |>
   melt() |>
@@ -1198,4 +1210,4 @@ evalq(coefs_control,envir=environment(ofun)) |>
   select(-Var2) -> est.po05
 
 est.po<-bind_rows(est.po01,est.po02,est.po03,est.po04,est.po05)
-write.csv(est.po,"est_po_joint_v5.csv",row.names=FALSE)
+write.csv(est.po,"est_po_joint_PdFixed.csv",row.names=FALSE)
