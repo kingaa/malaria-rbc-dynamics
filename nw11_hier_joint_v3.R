@@ -87,6 +87,7 @@ dat |>
     ),
     dprocess=Csnippet(r"{
       double rbc, K, md, ed;
+      double tweak2 = 0.0001;
       // GAUSSIAN MARKOV RF MODEL:
       loglik = dnorm(logR_2,logR_1,sigmaR,1) +
                dnorm(logN_2,logN_1,sigmaN,1) +
@@ -100,13 +101,13 @@ dat |>
       loglik -= lambdaM*md*md + lambdaE*ed*ed;
       // AR(1) individual deviation
       if (t_1 < 1) {
-        loglik += dnorm(logW_A_1-logW_1,0,sigmaw/sqrt(1-alphaw),1) +
-                  dnorm(logN_A_1-logN_1,0,sigman/sqrt(1-alphan),1) +
-                  dnorm(logR_A_1-logR_1,0,sigmar/sqrt(1-alphar),1);
+        loglik += dnorm(logW_A_1-logW_1,0,sigmaw/sqrt(1-(alphaw-tweak2)),1) +
+                  dnorm(logN_A_1-logN_1,0,sigman/sqrt(1-(alphan-tweak2)),1) +
+                  dnorm(logR_A_1-logR_1,0,sigmar/sqrt(1-(alphar-tweak2)),1);
       }
-      loglik += dnorm(logW_A_2-logW_2,alphaw*(logW_A_1-logW_1),sigmaw,1) +
-                dnorm(logN_A_2-logN_2,alphan*(logN_A_1-logN_1),sigman,1) +
-                dnorm(logR_A_2-logR_2,alphar*(logR_A_1-logR_1),sigmar,1);
+      loglik += dnorm(logW_A_2-logW_2,(alphaw-tweak2)*(logW_A_1-logW_1),sigmaw,1) +
+                dnorm(logN_A_2-logN_2,(alphan-tweak2)*(logN_A_1-logN_1),sigman,1) +
+                dnorm(logR_A_2-logR_2,(alphar-tweak2)*(logR_A_1-logR_1),sigmar,1);
       // SECOND MOUSE (B):
       rbc = exp(logR_B_1)+exp(logE_B_1);
       K = rbc*(1-exp(-exp(logM_B_1)/rbc));
@@ -116,13 +117,13 @@ dat |>
       loglik -= lambdaM*md*md + lambdaE*ed*ed;
       // AR(1) individual deviation
       if (t_1 < 1) {
-        loglik += dnorm(logW_B_1-logW_1,0,sigmaw/sqrt(1-alphaw),1) +
-                  dnorm(logN_B_1-logN_1,0,sigman/sqrt(1-alphan),1) +
-                  dnorm(logR_B_1-logR_1,0,sigmar/sqrt(1-alphar),1);
+        loglik += dnorm(logW_B_1-logW_1,0,sigmaw/sqrt(1-(alphaw-tweak2)),1) +
+                  dnorm(logN_B_1-logN_1,0,sigman/sqrt(1-(alphan-tweak2)),1) +
+                  dnorm(logR_B_1-logR_1,0,sigmar/sqrt(1-(alphar-tweak2)),1);
       }
-      loglik += dnorm(logW_B_2-logW_2,alphaw*(logW_B_1-logW_1),sigmaw,1) +
-                dnorm(logN_B_2-logN_2,alphan*(logN_B_1-logN_1),sigman,1) +
-                dnorm(logR_B_2-logR_2,alphar*(logR_B_1-logR_1),sigmar,1);
+      loglik += dnorm(logW_B_2-logW_2,(alphaw-tweak2)*(logW_B_1-logW_1),sigmaw,1) +
+                dnorm(logN_B_2-logN_2,(alphan-tweak2)*(logN_B_1-logN_1),sigman,1) +
+                dnorm(logR_B_2-logR_2,(alphar-tweak2)*(logR_B_1-logR_1),sigmar,1);
     }"
     ),
     partrans=parameter_trans(
@@ -201,6 +202,7 @@ dat |>
     ),
     dprocess=Csnippet(r"{
       double rbc, K, md, ed;
+      double tweak2 = 0.0001;
       // GAUSSIAN MARKOV RF MODEL:
       loglik = dnorm(logR_2,logR_1,sigmaR,1) +
                dnorm(logN_2,logN_1,sigmaN,1) +
@@ -214,13 +216,13 @@ dat |>
       loglik -= lambdaM*md*md + lambdaE*ed*ed;
       // AR(1) individual deviation
       if (t_1 < 1) {
-        loglik += dnorm(logW_A_1-logW_1,0,sigmaw/sqrt(1-alphaw),1) +
-                  dnorm(logN_A_1-logN_1,0,sigman/sqrt(1-alphan),1) +
-                  dnorm(logR_A_1-logR_1,0,sigmar/sqrt(1-alphar),1);
+        loglik += dnorm(logW_A_1-logW_1,0,sigmaw/sqrt(1-(alphaw-tweak2)),1) +
+                  dnorm(logN_A_1-logN_1,0,sigman/sqrt(1-(alphan-tweak2)),1) +
+                  dnorm(logR_A_1-logR_1,0,sigmar/sqrt(1-(alphar-tweak2)),1);
       }
-      loglik += dnorm(logW_A_2-logW_2,alphaw*(logW_A_1-logW_1),sigmaw,1) +
-                dnorm(logN_A_2-logN_2,alphan*(logN_A_1-logN_1),sigman,1) +
-                dnorm(logR_A_2-logR_2,alphar*(logR_A_1-logR_1),sigmar,1);
+      loglik += dnorm(logW_A_2-logW_2,(alphaw-tweak2)*(logW_A_1-logW_1),sigmaw,1) +
+                dnorm(logN_A_2-logN_2,(alphan-tweak2)*(logN_A_1-logN_1),sigman,1) +
+                dnorm(logR_A_2-logR_2,(alphar-tweak2)*(logR_A_1-logR_1),sigmar,1);
       // SECOND MOUSE (B):
       rbc = exp(logR_B_1)+exp(logE_B_1);
       K = rbc*(1-exp(-exp(logM_B_1)/rbc));
@@ -230,13 +232,13 @@ dat |>
       loglik -= lambdaM*md*md + lambdaE*ed*ed;
       // AR(1) individual deviation
       if (t_1 < 1) {
-        loglik += dnorm(logW_B_1-logW_1,0,sigmaw/sqrt(1-alphaw),1) +
-                  dnorm(logN_B_1-logN_1,0,sigman/sqrt(1-alphan),1) +
-                  dnorm(logR_B_1-logR_1,0,sigmar/sqrt(1-alphar),1);
+        loglik += dnorm(logW_B_1-logW_1,0,sigmaw/sqrt(1-(alphaw-tweak2)),1) +
+                  dnorm(logN_B_1-logN_1,0,sigman/sqrt(1-(alphan-tweak2)),1) +
+                  dnorm(logR_B_1-logR_1,0,sigmar/sqrt(1-(alphar-tweak2)),1);
       }
-      loglik += dnorm(logW_B_2-logW_2,alphaw*(logW_B_1-logW_1),sigmaw,1) +
-                dnorm(logN_B_2-logN_2,alphan*(logN_B_1-logN_1),sigman,1) +
-                dnorm(logR_B_2-logR_2,alphar*(logR_B_1-logR_1),sigmar,1);
+      loglik += dnorm(logW_B_2-logW_2,(alphaw-tweak2)*(logW_B_1-logW_1),sigmaw,1) +
+                dnorm(logN_B_2-logN_2,(alphan-tweak2)*(logN_B_1-logN_1),sigman,1) +
+                dnorm(logR_B_2-logR_2,(alphar-tweak2)*(logR_B_1-logR_1),sigmar,1);
       // THIRD MOUSE (C):
       rbc = exp(logR_C_1)+exp(logE_C_1);
       K = rbc*(1-exp(-exp(logM_C_1)/rbc));
@@ -246,13 +248,13 @@ dat |>
       loglik -= lambdaM*md*md + lambdaE*ed*ed;
       // AR(1) individual deviation
       if (t_1 < 1) {
-        loglik += dnorm(logW_C_1-logW_1,0,sigmaw/sqrt(1-alphaw),1) +
-                  dnorm(logN_C_1-logN_1,0,sigman/sqrt(1-alphan),1) +
-                  dnorm(logR_C_1-logR_1,0,sigmar/sqrt(1-alphar),1);
+        loglik += dnorm(logW_C_1-logW_1,0,sigmaw/sqrt(1-(alphaw-tweak2)),1) +
+                  dnorm(logN_C_1-logN_1,0,sigman/sqrt(1-(alphan-tweak2)),1) +
+                  dnorm(logR_C_1-logR_1,0,sigmar/sqrt(1-(alphar-tweak2)),1);
       }
-      loglik += dnorm(logW_C_2-logW_2,alphaw*(logW_C_1-logW_1),sigmaw,1) +
-                dnorm(logN_C_2-logN_2,alphan*(logN_C_1-logN_1),sigman,1) +
-                dnorm(logR_C_2-logR_2,alphar*(logR_C_1-logR_1),sigmar,1);
+      loglik += dnorm(logW_C_2-logW_2,(alphaw-tweak2)*(logW_C_1-logW_1),sigmaw,1) +
+                dnorm(logN_C_2-logN_2,(alphan-tweak2)*(logN_C_1-logN_1),sigman,1) +
+                dnorm(logR_C_2-logR_2,(alphar-tweak2)*(logR_C_1-logR_1),sigmar,1);
     }"
     ),
     partrans=parameter_trans(
@@ -331,6 +333,7 @@ dat |>
     ),
     dprocess=Csnippet(r"{
       double rbc, K, md, ed;
+      double tweak2 = 0.0001;
       // GAUSSIAN MARKOV RF MODEL:
       loglik = dnorm(logR_2,logR_1,sigmaR,1) +
                dnorm(logN_2,logN_1,sigmaN,1) +
@@ -344,13 +347,13 @@ dat |>
       loglik -= lambdaM*md*md + lambdaE*ed*ed;
       // AR(1) individual deviation
       if (t_1 < 1) {
-        loglik += dnorm(logW_A_1-logW_1,0,sigmaw/sqrt(1-alphaw),1) +
-                  dnorm(logN_A_1-logN_1,0,sigman/sqrt(1-alphan),1) +
-                  dnorm(logR_A_1-logR_1,0,sigmar/sqrt(1-alphar),1);
+        loglik += dnorm(logW_A_1-logW_1,0,sigmaw/sqrt(1-(alphaw-tweak2)),1) +
+                  dnorm(logN_A_1-logN_1,0,sigman/sqrt(1-(alphan-tweak2)),1) +
+                  dnorm(logR_A_1-logR_1,0,sigmar/sqrt(1-(alphar-tweak2)),1);
       }
-      loglik += dnorm(logW_A_2-logW_2,alphaw*(logW_A_1-logW_1),sigmaw,1) +
-                dnorm(logN_A_2-logN_2,alphan*(logN_A_1-logN_1),sigman,1) +
-                dnorm(logR_A_2-logR_2,alphar*(logR_A_1-logR_1),sigmar,1);
+      loglik += dnorm(logW_A_2-logW_2,(alphaw-tweak2)*(logW_A_1-logW_1),sigmaw,1) +
+                dnorm(logN_A_2-logN_2,(alphan-tweak2)*(logN_A_1-logN_1),sigman,1) +
+                dnorm(logR_A_2-logR_2,(alphar-tweak2)*(logR_A_1-logR_1),sigmar,1);
       // SECOND MOUSE (B):
       rbc = exp(logR_B_1)+exp(logE_B_1);
       K = rbc*(1-exp(-exp(logM_B_1)/rbc));
@@ -360,13 +363,13 @@ dat |>
       loglik -= lambdaM*md*md + lambdaE*ed*ed;
       // AR(1) individual deviation
       if (t_1 < 1) {
-        loglik += dnorm(logW_B_1-logW_1,0,sigmaw/sqrt(1-alphaw),1) +
-                  dnorm(logN_B_1-logN_1,0,sigman/sqrt(1-alphan),1) +
-                  dnorm(logR_B_1-logR_1,0,sigmar/sqrt(1-alphar),1);
+        loglik += dnorm(logW_B_1-logW_1,0,sigmaw/sqrt(1-(alphaw-tweak2)),1) +
+                  dnorm(logN_B_1-logN_1,0,sigman/sqrt(1-(alphan-tweak2)),1) +
+                  dnorm(logR_B_1-logR_1,0,sigmar/sqrt(1-(alphar-tweak2)),1);
       }
-      loglik += dnorm(logW_B_2-logW_2,alphaw*(logW_B_1-logW_1),sigmaw,1) +
-                dnorm(logN_B_2-logN_2,alphan*(logN_B_1-logN_1),sigman,1) +
-                dnorm(logR_B_2-logR_2,alphar*(logR_B_1-logR_1),sigmar,1);
+      loglik += dnorm(logW_B_2-logW_2,(alphaw-tweak2)*(logW_B_1-logW_1),sigmaw,1) +
+                dnorm(logN_B_2-logN_2,(alphan-tweak2)*(logN_B_1-logN_1),sigman,1) +
+                dnorm(logR_B_2-logR_2,(alphar-tweak2)*(logR_B_1-logR_1),sigmar,1);
       // THIRD MOUSE (C):
       rbc = exp(logR_C_1)+exp(logE_C_1);
       K = rbc*(1-exp(-exp(logM_C_1)/rbc));
@@ -376,13 +379,13 @@ dat |>
       loglik -= lambdaM*md*md + lambdaE*ed*ed;
       // AR(1) individual deviation
       if (t_1 < 1) {
-        loglik += dnorm(logW_C_1-logW_1,0,sigmaw/sqrt(1-alphaw),1) +
-                  dnorm(logN_C_1-logN_1,0,sigman/sqrt(1-alphan),1) +
-                  dnorm(logR_C_1-logR_1,0,sigmar/sqrt(1-alphar),1);
+        loglik += dnorm(logW_C_1-logW_1,0,sigmaw/sqrt(1-(alphaw-tweak2)),1) +
+                  dnorm(logN_C_1-logN_1,0,sigman/sqrt(1-(alphan-tweak2)),1) +
+                  dnorm(logR_C_1-logR_1,0,sigmar/sqrt(1-(alphar-tweak2)),1);
       }
-      loglik += dnorm(logW_C_2-logW_2,alphaw*(logW_C_1-logW_1),sigmaw,1) +
-                dnorm(logN_C_2-logN_2,alphan*(logN_C_1-logN_1),sigman,1) +
-                dnorm(logR_C_2-logR_2,alphar*(logR_C_1-logR_1),sigmar,1);
+      loglik += dnorm(logW_C_2-logW_2,(alphaw-tweak2)*(logW_C_1-logW_1),sigmaw,1) +
+                dnorm(logN_C_2-logN_2,(alphan-tweak2)*(logN_C_1-logN_1),sigman,1) +
+                dnorm(logR_C_2-logR_2,(alphar-tweak2)*(logR_C_1-logR_1),sigmar,1);
     }"
     ),
     partrans=parameter_trans(
@@ -454,70 +457,78 @@ dat |>
     ),
     dprocess=Csnippet(r"{
       double rbc, ed;
+      double tweak2 = 0.0001;
       // GAUSSIAN MARKOV RF MODEL:
-      loglik = dnorm(logR_2,logR_1,sigmaR,1);
-      
+      loglik = dnorm(logR_2,logR_1,sigmaR,1) +
+               dnorm(logN_2,logN_1,sigmaN,1);
       // FIRST MOUSE (A):
       rbc = exp(logR_A_1)+exp(logE_A_1);
       // unlawfulness penalty
-      ed = logE_A_2-log(rbc);
+      ed = logE_A_2-log(rbc*exp(-(exp(logN_A_1))/rbc));
       loglik -= lambdaE*ed*ed;
-      
       // AR(1) individual deviation
       if (t_1 < 1) {
-        loglik += dnorm(logR_A_1-logR_1,0,sigmar/sqrt(1-alphar),1);
+        loglik += dnorm(logN_A_1-logN_1,0,sigman/sqrt(1-(alphan-tweak2)),1) +
+                  dnorm(logR_A_1-logR_1,0,sigmar/sqrt(1-(alphar-tweak2)),1);
       }
-      loglik += dnorm(logR_A_2-logR_2,alphar*(logR_A_1-logR_1),sigmar,1);
+      loglik += dnorm(logN_A_2-logN_2,(alphan-tweak2)*(logN_A_1-logN_1),sigman,1) +
+                dnorm(logR_A_2-logR_2,(alphar-tweak2)*(logR_A_1-logR_1),sigmar,1);
       // SECOND MOUSE (B):
       rbc = exp(logR_B_1)+exp(logE_B_1);
       // unlawfulness penalty
-      ed = logE_B_2-log(rbc);
+      ed = logE_B_2-log(rbc*exp(-(exp(logN_B_1))/rbc));
       loglik -= lambdaE*ed*ed;
       // AR(1) individual deviation
       if (t_1 < 1) {
-        loglik += dnorm(logR_B_1-logR_1,0,sigmar/sqrt(1-alphar),1);
+        loglik += dnorm(logN_B_1-logN_1,0,sigman/sqrt(1-(alphan-tweak2)),1) +
+                  dnorm(logR_B_1-logR_1,0,sigmar/sqrt(1-(alphar-tweak2)),1);
       }
-      loglik += dnorm(logR_B_2-logR_2,alphar*(logR_B_1-logR_1),sigmar,1);
+      loglik += dnorm(logN_B_2-logN_2,(alphan-tweak2)*(logN_B_1-logN_1),sigman,1) +
+                dnorm(logR_B_2-logR_2,(alphar-tweak2)*(logR_B_1-logR_1),sigmar,1);
       // THIRD MOUSE (C):
       rbc = exp(logR_C_1)+exp(logE_C_1);
       // unlawfulness penalty
-      ed = logE_C_2-log(rbc);
+      ed = logE_C_2-log(rbc*exp(-(exp(logN_C_1))/rbc));
       loglik -= lambdaE*ed*ed;
       // AR(1) individual deviation
       if (t_1 < 1) {
-        loglik += dnorm(logR_C_1-logR_1,0,sigmar/sqrt(1-alphar),1);
+        loglik += dnorm(logN_C_1-logN_1,0,sigman/sqrt(1-(alphan-tweak2)),1) +
+                  dnorm(logR_C_1-logR_1,0,sigmar/sqrt(1-(alphar-tweak2)),1);
       }
-      loglik += dnorm(logR_C_2-logR_2,alphar*(logR_C_1-logR_1),sigmar,1);
+      loglik += dnorm(logN_C_2-logN_2,(alphan-tweak2)*(logN_C_1-logN_1),sigman,1) +
+                dnorm(logR_C_2-logR_2,(alphar-tweak2)*(logR_C_1-logR_1),sigmar,1);
     }"
     ),
     partrans=parameter_trans(
       log=c(
         "sigmaRBC","sigmaRetic",
         "lambdaE",
-        "sigmaR","sigmar"
+        "sigmaR","sigmar",
+        "sigmaN","sigman"
       ),
       logit=c(
-        "alphar"
+        "alphar","alphan"
       )        
     ),
     params=c(
       lambdaE=1000, # unlawfulness penalty: chosen to be large
-      sigmaR=0.75, # fixed at these values in example 9
+      sigmaR=0.75,sigmaN=0.75, # fixed at these values in example 9
       ## based on example 9 estimates above
+      alphan=0.5,sigman=0.6,
       alphar=0.8,sigmar=0.25,
-      sigmaRBC=0.1,sigmaRetic=0.1# chosen to be bigger than needed before
+      sigmaRBC=0.1,sigmaRetic=0.1 # chosen to be bigger than needed before
     ),
     paramnames=c(
       "lambdaE",
-      "sigmaR",
-      "alphar",
-      "sigmar",
+      "sigmaR","sigmaN",
+      "alphan","alphar",
+      "sigman","sigmar",
       "sigmaRBC","sigmaRetic"
     ),
     statenames=c(
-      "logE","logR",
+      "logE","logR","logN",
       outer(
-        c("logE","logR"),
+        c("logE","logR","logN"),
         c("A","B","C"),
         paste,sep="_"
       )
@@ -638,7 +649,8 @@ po_df <- dat|>
   pivot_wider() |>
   filter(day<=20) |>
   mutate(logE=log(Eryth),logR=log(Retic)) |>
-  select(day,mouse,logE,logR)
+  select(day,mouse,logE,logR) |>
+  mutate(logN=logR)
 
 po_df |> pivot_longer(-c(day,mouse)) |>
   mutate(value=exp(value)) |>
@@ -786,7 +798,7 @@ create_objfun <- function (
 ## -----------------------------------------------------------------------------
 
 stew(
-  file="nw11_hier_joint_v3.rda",
+  file="nw11_hier_joint_v3con.rda",
   info=TRUE,
   {
     create_objfun(
@@ -811,7 +823,7 @@ stew(
         par=coef(po02,c("alphaw","alphan","alphar",
                         "sigmaw","sigman","sigmar",
                         "sigmaRBC","sigmaPd","sigmaRetic"),transform=TRUE),
-        control=list(maxit=2000,reltol=1e-4,trace=1)
+        control=list(maxit=3000,reltol=1e-4,trace=1)
       ) -> fit
       ofun(fit$par)
     })
@@ -829,7 +841,7 @@ est.coefs05$box = "05"
 
 est.coefs<-bind_rows(est.coefs02,est.coefs03,est.coefs04,est.coefs05)
 
-write.csv(est.coefs,"est_coefs_joint_v3.csv",row.names=FALSE)
+write.csv(est.coefs,"est_coefs_joint_v3con.csv",row.names=FALSE)
 
 evalq(coefs1,envir=environment(ofun)) |>
   melt() |>
@@ -880,4 +892,4 @@ evalq(coefs_control,envir=environment(ofun)) |>
   select(-Var2) -> est.po05
 
 est.po<-bind_rows(est.po02,est.po03,est.po04,est.po05)
-write.csv(est.po,"est_po_joint_v3.csv",row.names=FALSE)
+write.csv(est.po,"est_po_joint_v3con.csv",row.names=FALSE)
