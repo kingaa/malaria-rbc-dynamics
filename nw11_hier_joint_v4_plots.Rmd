@@ -75,8 +75,8 @@ read_csv(
 ## Load fits
 
 ```{r fits}
-coef_df <- read_csv("est_coefs_joint_v5.csv")
-po_df <- read_csv("est_po_joint_v5.csv") |>
+coef_df <- read_csv("est_coefs_joint_PdFixed.csv")
+po_df <- read_csv("est_po_joint_PdFixed.csv") |>
   mutate(pABA=case_match(
     box,
     "01"~"0.05",
