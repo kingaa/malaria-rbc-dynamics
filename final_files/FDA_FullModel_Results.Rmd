@@ -111,7 +111,7 @@ po_df$name <- factor(po_df$name, levels=c("Parasites","Merozoites","Erythrocytes
 
 ## Parameter estimates
 
-```{r fits}
+```{r parameters}
 coef_df |> select(-box) |> unique()
 ```
 
