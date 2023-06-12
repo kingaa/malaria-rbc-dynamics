@@ -120,7 +120,7 @@ coef_df |> select(-box) |> unique()
 ```{r results}
 po_df |> pivot_wider(names_from=name,values_from=value) |>
   mutate(RBC=Erythrocytes+Reticulocytes) |>
-  select(Mouse,time,box,pABA,Reticulocytes,`Indiscriminate killing`,
+  select(Mouse,time,box,pABA,Reticulocytes,Merozoites,`Indiscriminate killing`,
          `Targeted killing`,RBC) |>
   pivot_longer(-c(Mouse,time,box,pABA)) -> po_tmp
 
