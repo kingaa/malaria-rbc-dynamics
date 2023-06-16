@@ -19,6 +19,7 @@ library(stringi)
 library(doParallel)
 library(pomp)
 library(panelPomp)
+library(gridExtra)
 ```
 
 ## Set working directory
@@ -241,6 +242,7 @@ sm1 |>
     loss=(R+E)*(1-Qus),
     rbc=E+R,
     varN=N/rbc,
+    perRetic=R/rbc,
     lik=exp(loglik-max(loglik))
   ) |>
   ungroup() |>
@@ -314,6 +316,28 @@ group_traj |>
   )
 ```
 
+## Plot group-level trajectories for percent reticulocytes
+
+```{r percRetic}
+group_traj |> filter(pABA%in%c("0%"),variable=="K") -> tmp
+peak.day <- tmp$time[which(tmp$med==max(tmp$med))]
+
+group_traj |>
+  filter(time<=20,variable%in%c("perRetic")) |>
+  ggplot()+
+  geom_line(aes(x=time,y=med*100,color=pABA),linewidth=2)+
+  geom_ribbon(aes(x=time,ymin=lo*100,ymax=hi*100,fill=pABA),alpha=0.2)+
+  geom_vline(xintercept=peak.day,linetype="dashed",col="grey")+
+  scale_y_log10()+
+  scale_colour_manual(values=cbPalette)+
+  scale_fill_manual(values=cbPalette)+
+  xlab("Day")+ylab("Percent reticulocytes")+
+  theme_bw()+
+  theme(strip.background=element_blank(),
+        panel.grid = element_blank()
+  )
+```
+
 ## Plot group-level swirlies
 
 ```{r swirlies}
@@ -336,6 +360,19 @@ swirls |>
 
 
 swirls |>
+  ggplot(aes(x=R,y=N,color=pABA))+
+  geom_path(linewidth=2)+
+  geom_text(aes(label=time),col="black",size=5)+
+  scale_x_log10()+scale_y_log10()+
+  scale_colour_manual(values=cbPalette)+
+  xlab("Reticulcoytes")+ylab("Indiscriminate killing")+
+  theme_bw()+
+  theme(
+    panel.grid = element_blank()
+  )
+
+swirls |>
+  filter(time<=6) |>
   ggplot(aes(x=R,y=N,color=pABA))+
   geom_path(linewidth=2)+
   geom_text(aes(label=time),col="black",size=5)+
@@ -374,6 +411,258 @@ swirls |>
   )
 ```
 
+## Targeted killing versus parasite density
+
+```{r WversusK}
+swirls |>
+  ggplot(aes(x=K,y=W,color=pABA))+
+  geom_path(linewidth=2)+
+  geom_text(data=swirls |> filter(time%in%c(0,5,10,15,20)),aes(label=time),col="black",size=5)+
+  scale_x_log10()+scale_y_log10()+
+  scale_colour_manual(values=cbPalette)+
+  xlab("Parasite density")+ylab("Targeted killing")+
+  theme_bw()+
+  theme(
+    panel.grid = element_blank(),
+    legend.position = "top"
+  ) -> full.WK
+
+swirls |>
+  filter(time<=6) |>
+  ggplot(aes(x=K,y=W,color=pABA))+
+  geom_path(linewidth=2)+
+  geom_text(data=swirls |> filter(time%in%c(0,6)),aes(label=time),col="black",size=5)+
+  scale_x_log10()+scale_y_log10()+
+  scale_colour_manual(values=cbPalette)+
+  ggtitle("Pre-peak parasitaemia")+
+  theme_bw()+
+  theme(
+    axis.title = element_blank(),
+    panel.grid = element_blank(),
+    legend.position = "none"
+  ) -> pre.WK
+
+swirls |>
+  filter(time>6) |>
+  ggplot(aes(x=K,y=W,color=pABA))+
+  geom_path(linewidth=2)+
+  geom_text(data=swirls |> filter(time%in%c(7,20)),aes(label=time),col="black",size=5)+
+  scale_x_log10()+scale_y_log10()+
+  scale_colour_manual(values=cbPalette)+
+  ggtitle("Post-peak parasitaemia")+
+  theme_bw()+
+  theme(
+    axis.title = element_blank(),
+    panel.grid = element_blank(),
+    legend.position = "none"
+  ) -> post.WK
+
+ggarrange(full.WK,                                                 # First row with scatter plot
+          ggarrange(pre.WK, post.WK, nrow = 2, labels = c("B", "C")), # Second row with box and dot plots
+          ncol = 2, 
+          labels = "A",
+          # Labels of the scatter plot,
+          common.legend = TRUE
+          ) 
+
+```
+
+## Indiscriminate killing versus reticulocyte supply
+
+```{r NversusR}
+swirls |>
+  ggplot(aes(x=R,y=N,color=pABA))+
+  geom_path(linewidth=2)+
+  geom_text(data=swirls |> filter(time%in%c(0,5,10,15,20)),aes(label=time),col="black",size=5)+
+  scale_x_log10()+scale_y_log10()+
+  scale_colour_manual(values=cbPalette)+
+  xlab("Reticulocyte supply")+ylab("Indiscriminate killing")+
+  theme_bw()+
+  theme(
+    panel.grid = element_blank(),
+    legend.position = "top"
+  ) -> full.NR
+
+swirls |>
+  filter(time<=6) |>
+  ggplot(aes(x=R,y=N,color=pABA))+
+  geom_path(linewidth=2)+
+  geom_text(data=swirls |> filter(time%in%c(0,6)),aes(label=time),col="black",size=5)+
+  scale_x_log10()+scale_y_log10()+
+  scale_colour_manual(values=cbPalette)+
+  ggtitle("Pre-peak parasitaemia")+
+  theme_bw()+
+  theme(
+    axis.title = element_blank(),
+    panel.grid = element_blank(),
+    legend.position = "none"
+  ) -> pre.NR
+
+swirls |>
+  filter(time>6) |>
+  ggplot(aes(x=R,y=N,color=pABA))+
+  geom_path(linewidth=2)+
+  geom_text(data=swirls |> filter(time%in%c(7,20)),aes(label=time),col="black",size=5)+
+  scale_x_log10()+scale_y_log10()+
+  scale_colour_manual(values=cbPalette)+
+  ggtitle("Post-peak parasitaemia")+
+  theme_bw()+
+  theme(
+    axis.title = element_blank(),
+    panel.grid = element_blank(),
+    legend.position = "none"
+  ) -> post.NR
+
+ggarrange(full.NR,                                                 # First row with scatter plot
+          ggarrange(pre.NR, post.NR, nrow = 2, labels = c("B", "C")), # Second row with box and dot plots
+          ncol = 2, 
+          labels = "A",
+          # Labels of the scatter plot,
+          common.legend = TRUE
+          ) 
+
+```
+
+## Targeted killing versus reticulocyte supply
+
+```{r WversusR}
+swirls |>
+  ggplot(aes(x=R,y=W,color=pABA))+
+  geom_path(linewidth=2)+
+  geom_text(data=swirls |> filter(time%in%c(0,5,10,15,20)),aes(label=time),col="black",size=5)+
+  scale_x_log10()+scale_y_log10()+
+  scale_colour_manual(values=cbPalette)+
+  xlab("Reticulocyte supply")+ylab("Targeted killing")+
+  theme_bw()+
+  theme(
+    panel.grid = element_blank(),
+    legend.position = "top"
+  ) -> full.RW
+
+swirls |>
+  filter(time<=6) |>
+  ggplot(aes(x=R,y=W,color=pABA))+
+  geom_path(linewidth=2)+
+  geom_text(data=swirls |> filter(time%in%c(0,6)),aes(label=time),col="black",size=5)+
+  scale_x_log10()+scale_y_log10()+
+  scale_colour_manual(values=cbPalette)+
+  ggtitle("Pre-peak parasitaemia")+
+  theme_bw()+
+  theme(
+    axis.title = element_blank(),
+    panel.grid = element_blank(),
+    legend.position = "none"
+  ) -> pre.RW
+
+swirls |>
+  filter(time>6) |>
+  ggplot(aes(x=R,y=W,color=pABA))+
+  geom_path(linewidth=2)+
+  geom_text(data=swirls |> filter(time%in%c(7,20)),aes(label=time),col="black",size=5)+
+  scale_x_log10()+scale_y_log10()+
+  scale_colour_manual(values=cbPalette)+
+  ggtitle("Post-peak parasitaemia")+
+  theme_bw()+
+  theme(
+    axis.title = element_blank(),
+    panel.grid = element_blank(),
+    legend.position = "none"
+  ) -> post.RW
+
+ggarrange(full.RW,                                                 # First row with scatter plot
+          ggarrange(pre.RW, post.RW, nrow = 2, labels = c("B", "C")), # Second row with box and dot plots
+          ncol = 2, 
+          labels = "A",
+          # Labels of the scatter plot,
+          common.legend = TRUE
+          ) 
+
+```
+## Reticulocyte supply versus erythrocyte density
+
+```{r RversusE}
+swirls |>
+  ggplot(aes(x=E,y=R,color=pABA))+
+  geom_path(linewidth=2)+
+  geom_text(data=swirls |> filter(time%in%c(0,5,10,15,20)),aes(label=time),col="black",size=5)+
+  scale_x_log10()+scale_y_log10()+
+  scale_colour_manual(values=cbPalette)+
+  xlab("Erythrocyte density")+ylab("Reticulocyte supply")+
+  theme_bw()+
+  theme(
+    panel.grid = element_blank(),
+    legend.position = "top"
+  ) -> full.ER
+
+swirls |>
+  filter(time<=6) |>
+  ggplot(aes(x=E,y=R,color=pABA))+
+  geom_path(linewidth=2)+
+  geom_text(data=swirls |> filter(time%in%c(0,6)),aes(label=time),col="black",size=5)+
+  scale_x_log10()+scale_y_log10()+
+  scale_colour_manual(values=cbPalette)+
+  ggtitle("Pre-peak parasitaemia")+
+  theme_bw()+
+  theme(
+    axis.title = element_blank(),
+    panel.grid = element_blank(),
+    legend.position = "none"
+  ) -> pre.ER
+
+swirls |>
+  filter(time>6) |>
+  ggplot(aes(x=E,y=R,color=pABA))+
+  geom_path(linewidth=2)+
+  geom_text(data=swirls |> filter(time%in%c(7,20)),aes(label=time),col="black",size=5)+
+  scale_x_log10()+scale_y_log10()+
+  scale_colour_manual(values=cbPalette)+
+  ggtitle("Post-peak parasitaemia")+
+  theme_bw()+
+  theme(
+    axis.title = element_blank(),
+    panel.grid = element_blank(),
+    legend.position = "none"
+  ) -> post.ER
+
+ggarrange(full.ER,                                                 # First row with scatter plot
+          ggarrange(pre.ER, post.ER, nrow = 2, labels = c("B", "C")), # Second row with box and dot plots
+          ncol = 2, 
+          labels = "A",
+          # Labels of the scatter plot,
+          common.legend = TRUE
+          ) 
+
+```
+
+## Plot N versus R with bi-directional error bars
+
+```{r NversusRerrorbars}
+group_traj |>
+  filter(variable%in%c("N","R")) |>
+  filter(time<=20) |>
+  pivot_longer(lo:hi) |>
+  pivot_wider(names_from=c(variable,name),values_from=value,names_sep="_") -> NRerr
+
+ggplot(data = NRerr,aes(x = R_med,y = N_med,col = pABA))+
+  geom_errorbar(aes(ymin = N_lo,ymax = N_hi,col = pABA))+
+  geom_errorbarh(aes(xmin = R_lo,xmax = R_hi))+
+  geom_label(aes(label=time))+
+  scale_x_log10()+scale_y_log10()+
+  scale_colour_manual(values=cbPalette)+
+  xlab("Reticulocyte supply")+ylab("Indiscriminate killing")+
+  theme_bw()
+
+ggplot(data = NRerr,aes(x = R_med,y = N_med,col = pABA))+
+  geom_errorbar(aes(ymin = N_lo,ymax = N_hi,col = pABA))+
+  geom_errorbarh(aes(xmin = R_lo,xmax = R_hi))+
+  geom_point()+
+  scale_x_log10()+scale_y_log10()+
+  scale_colour_manual(values=cbPalette)+
+  xlab("Reticulocyte supply")+ylab("Indiscriminate killing")+
+  theme_bw()
+
+```
+
 ## Plot reticulocytes versus erythrocytes
 
 ```{r RversusE}
@@ -401,6 +690,30 @@ ggplot()+
   theme(
     panel.grid = element_blank(),
     legend.position = "none",
+    strip.background = element_blank()
+  )
+
+ggplot()+
+  geom_path(data=swirls|>filter(time<=6),aes(x=E,y=R,color=pABA),linewidth=2)+
+  geom_text(data=swirls|>filter(time<=6),aes(x=E,y=R,label=time),col="black",size=5)+
+  xlab("Erythrocytes")+ylab("Reticulocytes")+
+  theme_bw()+
+  scale_x_log10()+scale_y_log10()+
+  scale_colour_manual(values=cbPalette)+
+  theme(
+    panel.grid = element_blank(),
+    strip.background = element_blank()
+  )
+
+ggplot()+
+  geom_path(data=swirls,aes(x=E,y=R,color=pABA),linewidth=2)+
+  geom_text(data=swirls,aes(x=E,y=R,label=time),col="black",size=5)+
+  xlab("Erythrocytes")+ylab("Reticulocytes")+
+  theme_bw()+
+  scale_x_log10()+scale_y_log10()+
+  scale_colour_manual(values=cbPalette)+
+  theme(
+    panel.grid = element_blank(),
     strip.background = element_blank()
   )
 ```
