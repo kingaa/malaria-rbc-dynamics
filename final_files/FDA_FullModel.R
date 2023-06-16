@@ -739,7 +739,7 @@ full_join(po_avg,po_ind,by="day") |>
 ## -----------------------------------------------------------------------------
 #Initial trajectories for box 2 (pABA = 0.005)
 po_df <- dat |>
-  filter(box=="02") |>
+  filter(box=="02",mouse!="C") |>
   select(
     day,
     mouse,
