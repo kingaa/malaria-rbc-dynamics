@@ -30,7 +30,7 @@ cbPalette <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2",
 
 ## Load data
 
-```{r data}
+```{r data, echo=FALSE}
 ##Read in data
 read_csv(
   "data.csv",
@@ -78,11 +78,12 @@ read_csv(
   ) -> data_full
 data_full$pABA <- factor(data_full$pABA,levels=c("Control","0%","0.05%","0.5%","5%"))
 data_full$Pd[data_full$box=="05"] <- NA
+head(data_full)
 ```
 
 ## Load convergence and likelihood
 
-```{r ConLik}
+```{r ConLik, echo=FALSE}
 rda.obj <- load("FDA_FullModel.rda")
 print(paste("The convergence integer code is ",fit$convergence,".",sep=""))
 print(paste("The log likelihood at convergence (given the integer code is zero) is ",round(-fit$value,2),".",sep=""))
@@ -90,7 +91,7 @@ print(paste("The log likelihood at convergence (given the integer code is zero) 
 
 ## Load fits and parameter estimates
 
-```{r fits}
+```{r fits, echo=FALSE}
 coef_df <- read_csv("parameter_results_FullModel.csv",show_col_types = FALSE)
 po_df <- read_csv("trajectory_results_FullModel.csv",show_col_types = FALSE) |>
   mutate(
@@ -115,17 +116,18 @@ po_df <- read_csv("trajectory_results_FullModel.csv",show_col_types = FALSE) |>
 po_df$Mouse[po_df$Mouse=="GROUP"] = "Group"
 po_df$pABA <- factor(po_df$pABA,levels=c("Control","0%","0.05%","0.5%","5%"))
 po_df$name <- factor(po_df$name, levels=c("Parasites","Merozoites","Erythrocytes","Reticulocytes","Indiscriminate killing","Targeted killing"))
+head(po_df)
 ```
 
 ## Parameter estimates
 
-```{r parameters}
+```{r parameters, echo=FALSE}
 coef_df |> select(-box) |> unique()
 ```
 
 ## Plot model results
 
-```{r results}
+```{r results, echo=FALSE}
 po_df |> pivot_wider(names_from=name,values_from=value) |>
   mutate(RBC=Erythrocytes+Reticulocytes) |>
   select(Mouse,time,box,pABA,Reticulocytes,Merozoites,`Indiscriminate killing`,
@@ -148,7 +150,7 @@ po_tmp|>
 
 ## Compare model results to data
 
-```{r comparison}
+```{r comparison, echo=FALSE}
 po_df |>
   filter(Mouse!="Group",name%in%c("Erythrocytes","Reticulocytes","Merozoites")) |>
   pivot_wider(names_from=name,values_from=value) |>
@@ -182,7 +184,7 @@ ggplot()+
 
 ## Plot group level time series
 
-```{r group}
+```{r group, echo=FALSE}
 po_df |>
   filter(Mouse=="Group") |>
   pivot_wider(names_from=name,values_from=value) |>
@@ -239,7 +241,7 @@ group_fits |>
 
 ## Plot swirlies
 
-```{r swirlies}
+```{r swirlies, echo=FALSE}
 po_df |>
   filter(Mouse=="Group") |>
   pivot_wider(names_from=name,values_from=value) |>
@@ -298,7 +300,7 @@ swirls |>
 
 ## Plot reticulocytes versus erythrocytes
 
-```{r pABA0}
+```{r RversusE, echo=FALSE}
 ggplot()+
   geom_path(data=swirls,aes(x=Erythrocytes,y=Reticulocytes,color=pABA),linewidth=2)+
   geom_text(data=swirls,aes(x=Erythrocytes,y=Reticulocytes,label=time),col="black",size=5)+
