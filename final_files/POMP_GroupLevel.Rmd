@@ -3,8 +3,8 @@ title: "POMP group-level results - All boxes"
 author: "Madeline Peters, Aaron King"
 date: "`r Sys.Date()`"
 output:
-  pdf_document: default
   html_document: default
+  pdf_document: default
 ---
 
 ```{r setup, include=FALSE}
