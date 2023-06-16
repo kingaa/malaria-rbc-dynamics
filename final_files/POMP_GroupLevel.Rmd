@@ -19,7 +19,7 @@ library(stringi)
 library(doParallel)
 library(pomp)
 library(panelPomp)
-library(gridExtra)
+library(ggpubr)
 ```
 
 ## Set working directory
@@ -37,7 +37,7 @@ cbPalette <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2",
 
 ## Read in PNAS data
 
-```{r data}
+```{r data, echo=FALSE}
 read_csv("data.csv",
          col_types="iiinnnn"
 ) %>%
@@ -73,12 +73,12 @@ read_csv("data.csv",
     Eryth=(1-CD71/Ter119)*RBC,
     Retic=CD71/Ter119*RBC
   ) -> flow
-
+head(flow)
 ```
 
 ## Obtain estimates for beta and dose
 
-```{r beta}
+```{r beta, echo=FALSE}
 flow %>%
   filter(day<=4) %>%
   lm(log(Pd)~box:day+mouseid-1,data=.) -> fit2
@@ -127,6 +127,7 @@ theta %>%
     W_0 = 8.8e4, 
     N_0 = 8e5
   ) -> theta
+head(theta)
 ```
 
 ## Create object pos with pomp object for each mouse  
@@ -188,9 +189,9 @@ foreach (m = iter(theta,"row"),.inorder=TRUE,.combine=c) %dopar% {
   set_names(theta$mouseid) -> pos
 ```
 
-## Obtain MLE for beta and dose
+## Obtain MLE for sigmas, initial values, betas and dose
 
-```{r MLE}
+```{r MLE, echo=FALSE}
 pf4name <- "m5pf4.rds"
 pf4 <- readRDS(pf4name)
 
@@ -207,6 +208,8 @@ theta %>%
   tidyr::extract(variable, into=c("variable","mouseid"), 
                  regex="([[:alnum:]]+)\\[(.+?)\\]") %>%
   spread(variable,value) -> bdf
+print(mle)
+print(bdf)
 ```
 
 ## Load in PNAS trajectories
@@ -266,8 +269,6 @@ group_traj$pABA <- factor(group_traj$box,levels=c("05","04","03","02","01"),
 group_traj <- group_traj |> dplyr::slice(-which(group_traj$box=="05"&group_traj$variable=="W"))
 ```
 
-## Plot group-level trajectories for all variables
-
 ```{r allVariables}
 group_traj |>
   filter(time<=20,variable%in%c("rbc","E","R","N","W","K")) |>
@@ -294,7 +295,7 @@ group_traj |>
 
 ## Plot group-level trajectories for reticulocytes with day of peak parasitaemia
 
-```{r peakParaRetic}
+```{r peakParaRetic, echo=FALSE}
 group_traj |> filter(pABA%in%c("0%"),variable=="K") -> tmp
 peak.day <- tmp$time[which(tmp$med==max(tmp$med))]
 
@@ -318,7 +319,7 @@ group_traj |>
 
 ## Plot group-level trajectories for percent reticulocytes
 
-```{r percRetic}
+```{r percRetic, echo=FALSE}
 group_traj |> filter(pABA%in%c("0%"),variable=="K") -> tmp
 peak.day <- tmp$time[which(tmp$med==max(tmp$med))]
 
@@ -338,138 +339,19 @@ group_traj |>
   )
 ```
 
-## Plot group-level swirlies
+## Create swirly data frame
 
-```{r swirlies}
+```{r swirlies, echo=FALSE}
 group_traj |>
   filter(time<=20) |>
   select(-hi,-lo) |>
   pivot_wider(names_from=variable,values_from=med) -> swirls
-
-swirls |>
-  ggplot(aes(x=K,y=W,color=pABA))+
-  geom_path(linewidth=2)+
-  geom_text(aes(label=time),col="black",size=5)+
-  scale_x_log10()+scale_y_log10()+
-  scale_colour_manual(values=cbPalette)+
-  xlab("Parasite density")+ylab("Targeted killing")+
-  theme_bw()+
-  theme(
-    panel.grid = element_blank()
-  )
-
-
-swirls |>
-  ggplot(aes(x=R,y=N,color=pABA))+
-  geom_path(linewidth=2)+
-  geom_text(aes(label=time),col="black",size=5)+
-  scale_x_log10()+scale_y_log10()+
-  scale_colour_manual(values=cbPalette)+
-  xlab("Reticulcoytes")+ylab("Indiscriminate killing")+
-  theme_bw()+
-  theme(
-    panel.grid = element_blank()
-  )
-
-swirls |>
-  filter(time<=6) |>
-  ggplot(aes(x=R,y=N,color=pABA))+
-  geom_path(linewidth=2)+
-  geom_text(aes(label=time),col="black",size=5)+
-  scale_x_log10()+scale_y_log10()+
-  scale_colour_manual(values=cbPalette)+
-  xlab("Reticulcoytes")+ylab("Indiscriminate killing")+
-  theme_bw()+
-  theme(
-    panel.grid = element_blank()
-  )
-
-
-swirls |>
-  ggplot(aes(x=R,y=W,color=pABA))+
-  geom_path(linewidth=2)+
-  geom_text(aes(label=time),col="black",size=5)+
-  scale_x_log10()+scale_y_log10()+
-  scale_colour_manual(values=cbPalette)+
-  xlab("Reticulocytes")+ylab("Targeted killing")+
-  theme_bw()+
-  theme(
-    panel.grid = element_blank()
-  )
-
-
-swirls |>
-  ggplot(aes(x=N,y=W,color=pABA))+
-  geom_path(linewidth=2)+
-  geom_text(aes(label=time),col="black",size=5)+
-  scale_x_log10()+scale_y_log10()+
-  scale_colour_manual(values=cbPalette)+
-  xlab("Indiscriminate killing")+ylab("Targeted killing")+
-  theme_bw()+
-  theme(
-    panel.grid = element_blank()
-  )
-```
-
-## Targeted killing versus parasite density
-
-```{r WversusK}
-swirls |>
-  ggplot(aes(x=K,y=W,color=pABA))+
-  geom_path(linewidth=2)+
-  geom_text(data=swirls |> filter(time%in%c(0,5,10,15,20)),aes(label=time),col="black",size=5)+
-  scale_x_log10()+scale_y_log10()+
-  scale_colour_manual(values=cbPalette)+
-  xlab("Parasite density")+ylab("Targeted killing")+
-  theme_bw()+
-  theme(
-    panel.grid = element_blank(),
-    legend.position = "top"
-  ) -> full.WK
-
-swirls |>
-  filter(time<=6) |>
-  ggplot(aes(x=K,y=W,color=pABA))+
-  geom_path(linewidth=2)+
-  geom_text(data=swirls |> filter(time%in%c(0,6)),aes(label=time),col="black",size=5)+
-  scale_x_log10()+scale_y_log10()+
-  scale_colour_manual(values=cbPalette)+
-  ggtitle("Pre-peak parasitaemia")+
-  theme_bw()+
-  theme(
-    axis.title = element_blank(),
-    panel.grid = element_blank(),
-    legend.position = "none"
-  ) -> pre.WK
-
-swirls |>
-  filter(time>6) |>
-  ggplot(aes(x=K,y=W,color=pABA))+
-  geom_path(linewidth=2)+
-  geom_text(data=swirls |> filter(time%in%c(7,20)),aes(label=time),col="black",size=5)+
-  scale_x_log10()+scale_y_log10()+
-  scale_colour_manual(values=cbPalette)+
-  ggtitle("Post-peak parasitaemia")+
-  theme_bw()+
-  theme(
-    axis.title = element_blank(),
-    panel.grid = element_blank(),
-    legend.position = "none"
-  ) -> post.WK
-
-ggarrange(full.WK,                                                 # First row with scatter plot
-          ggarrange(pre.WK, post.WK, nrow = 2, labels = c("B", "C")), # Second row with box and dot plots
-          ncol = 2, 
-          labels = "A",
-          # Labels of the scatter plot,
-          common.legend = TRUE
-          ) 
-
+head(swirls)
 ```
 
 ## Indiscriminate killing versus reticulocyte supply
 
-```{r NversusR}
+```{r NversusR, echo=FALSE}
 swirls |>
   ggplot(aes(x=R,y=N,color=pABA))+
   geom_path(linewidth=2)+
@@ -525,7 +407,7 @@ ggarrange(full.NR,                                                 # First row w
 
 ## Targeted killing versus reticulocyte supply
 
-```{r WversusR}
+```{r WversusR, echo=FALSE}
 swirls |>
   ggplot(aes(x=R,y=W,color=pABA))+
   geom_path(linewidth=2)+
@@ -578,9 +460,10 @@ ggarrange(full.RW,                                                 # First row w
           ) 
 
 ```
+
 ## Reticulocyte supply versus erythrocyte density
 
-```{r RversusE}
+```{r RversusE, echo=FALSE}
 swirls |>
   ggplot(aes(x=E,y=R,color=pABA))+
   geom_path(linewidth=2)+
@@ -636,7 +519,7 @@ ggarrange(full.ER,                                                 # First row w
 
 ## Plot N versus R with bi-directional error bars
 
-```{r NversusRerrorbars}
+```{r NversusRerrorbars, echo=FALSE}
 group_traj |>
   filter(variable%in%c("N","R")) |>
   filter(time<=20) |>
@@ -665,7 +548,7 @@ ggplot(data = NRerr,aes(x = R_med,y = N_med,col = pABA))+
 
 ## Plot reticulocytes versus erythrocytes
 
-```{r RversusE}
+```{r RversusE2, echo=FALSE}
 ggplot()+
   geom_path(data=swirls,aes(x=E,y=R,color=pABA),linewidth=2)+
   geom_text(data=swirls,aes(x=E,y=R,label=time),col="black",size=5)+
