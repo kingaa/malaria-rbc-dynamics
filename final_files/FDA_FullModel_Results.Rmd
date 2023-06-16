@@ -80,7 +80,15 @@ data_full$pABA <- factor(data_full$pABA,levels=c("Control","0%","0.05%","0.5%","
 data_full$Pd[data_full$box=="05"] <- NA
 ```
 
-## Load fits
+## Load convergence and likelihood
+
+```{r ConLik}
+rda.obj <- load("FDA_FullModel.rda")
+print(paste("The convergence integer code is ",fit$convergence,".",sep=""))
+print(paste("The log likelihood at convergence (given the integer code is zero) is ",round(-fit$value,2),".",sep=""))
+```
+
+## Load fits and parameter estimates
 
 ```{r fits}
 coef_df <- read_csv("parameter_results_FullModel.csv",show_col_types = FALSE)
