@@ -8,7 +8,7 @@ output:
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE, fig.align = "center")
 ```
 
 ## Load required packages
@@ -317,6 +317,28 @@ group_traj |>
   )
 ```
 
+## Plot group-level trajectories for parasite density
+
+```{r ParaDens, echo=FALSE}
+group_traj |>
+  filter(time<=20,variable%in%c("K")) |>
+  mutate(variable=case_match(variable,
+                             "K"~"Parasite density")) |>
+  ggplot()+
+  geom_line(aes(x=time,y=med,color=pABA),linewidth=2)+
+  geom_ribbon(aes(x=time,ymin=lo,ymax=hi,fill=pABA),alpha=0.2)+
+  geom_vline(xintercept=peak.day,linetype="dashed",col="grey")+
+  scale_y_log10()+
+  scale_colour_manual(values=cbPalette)+
+  scale_fill_manual(values=cbPalette)+
+  xlab("Day")+ylab("Parasites (density per microlitre)")+
+  theme_bw()+
+  theme(strip.background=element_blank(),
+        panel.grid = element_blank()
+  )
+
+```
+
 ## Plot group-level trajectories for percent reticulocytes
 
 ```{r percRetic, echo=FALSE}
@@ -347,6 +369,78 @@ group_traj |>
   select(-hi,-lo) |>
   pivot_wider(names_from=variable,values_from=med) -> swirls
 head(swirls)
+```
+
+## Parasite density versus targeted killing
+
+```{r WversusK, echo=FALSE}
+swirls |>
+  ggplot(aes(x=K,y=W,color=pABA))+
+  geom_path(linewidth=2)+
+  geom_text(data=swirls |> filter(time%in%c(0,5,10,15,20)),aes(label=time),col="black",size=5)+
+  scale_x_log10()+scale_y_log10()+
+  scale_colour_manual(values=cbPalette)+
+  xlab("Parasite density")+ylab("Targeted killing")+
+  theme_bw()+
+  theme(
+    panel.grid = element_blank(),
+    legend.position = "top"
+  ) -> full.WK
+
+swirls |>
+  filter(time<=6) |>
+  ggplot(aes(x=K,y=W,color=pABA))+
+  geom_path(linewidth=2)+
+  geom_text(data=swirls |> filter(time%in%c(0,6)),aes(label=time),col="black",size=5)+
+  scale_x_log10()+scale_y_log10()+
+  scale_colour_manual(values=cbPalette)+
+  ggtitle("Pre-peak parasitaemia")+
+  theme_bw()+
+  theme(
+    axis.title = element_blank(),
+    panel.grid = element_blank(),
+    legend.position = "none"
+  ) -> pre.WK
+
+
+swirls |>
+  filter(time%in%c(5,6,7)) |>
+  ggplot(aes(x=K,y=W,color=pABA))+
+  geom_path(linewidth=2)+
+  geom_text(data=swirls |> filter(time%in%c(5,6,7)),aes(label=time),col="black",size=5)+
+  scale_x_log10()+scale_y_log10()+
+  scale_colour_manual(values=cbPalette)+
+  ggtitle("Peak parasitaemia")+
+  theme_bw()+
+  theme(
+    axis.title = element_blank(),
+    panel.grid = element_blank(),
+    legend.position = "none"
+  ) -> mid.WK
+
+swirls |>
+  filter(time>6) |>
+  ggplot(aes(x=K,y=W,color=pABA))+
+  geom_path(linewidth=2)+
+  geom_text(data=swirls |> filter(time%in%c(7,20)),aes(label=time),col="black",size=5)+
+  scale_x_log10()+scale_y_log10()+
+  scale_colour_manual(values=cbPalette)+
+  ggtitle("Post-peak parasitaemia")+
+  theme_bw()+
+  theme(
+    axis.title = element_blank(),
+    panel.grid = element_blank(),
+    legend.position = "none"
+  ) -> post.WK
+
+ggarrange(full.WK,                                                 # First row with scatter plot
+          ggarrange(pre.WK,mid.WK,post.WK, nrow = 3, labels = c("B", "C","D")), # Second row with box and dot plots
+          ncol = 2, 
+          labels = "A",
+          # Labels of the scatter plot,
+          common.legend = TRUE
+          ) 
+
 ```
 
 ## Indiscriminate killing versus reticulocyte supply
@@ -599,4 +693,107 @@ ggplot()+
     panel.grid = element_blank(),
     strip.background = element_blank()
   )
+```
+
+# Prepare data for plotting individual trajectories at low opacity
+
+```{r sm1prep, echo=FALSE}
+sm1 |>
+  filter(mouseid!="01-02",mouseid!="02-03") |>
+  separate_wider_delim(mouseid,delim="-",names=c("box","mouse"),cols_remove=FALSE) |>
+  mutate(mouse=case_match(mouse,
+                          "01"~"A",
+                          "02"~"B",
+                          "03"~"C"),
+         pABA=case_match(box,
+                         "01"~"5%",
+                         "02"~"0.5%",
+                         "03"~"0.05%",
+                         "04"~"0%",
+                         "05"~"Control"),
+         variable=case_match(variable,
+                             "K"~"Parasites",
+                             "R"~"Reticulocytes",
+                             "E"~"Erythrocytes",
+                             "N"~"Indiscriminate killing",
+                             "W"~"Targeted killing",
+                             "M"~"Merozoites")) -> sm1prep
+head(sm1prep)
+```
+
+## Targeted killing vs. parasites: individual trajectories with low opacity
+
+
+```{r indivLowOpacWK, echo = FALSE}
+sm1prep |> 
+  filter(variable%in%c("Parasites","Targeted killing"),pABA!="Control") |>
+  pivot_wider(names_from="variable",values_from="value") |>
+  filter(rep%in%sample(1:2000,100)) -> sm1indiv
+  
+ggplot()+
+  geom_path(data=sm1indiv |> filter(pABA!="Control"),aes(x=Parasites,y=`Targeted killing`,group=mouseid,col=pABA),alpha=0.05)+
+  geom_path(dat=swirls |> filter(pABA!="Control"),aes(x=K,y=W,col=pABA),linewidth=1.5)+
+  ylim(10^5,10^8)+
+  scale_x_log10()+scale_y_log10()+
+  scale_colour_manual(values=cbPalette)+
+  xlab("Parasite density")+ylab("Targeted killing")+
+  theme_bw()+
+  facet_wrap(pABA~.)+
+  theme(
+    panel.grid = element_blank(),
+    legend.position = "none",
+    strip.background = element_blank()
+  )
+```
+
+## Targeted killing vs. reticulocytes: individual trajectories with low opacity
+
+
+```{r indivLowOpacWR, echo = FALSE}
+sm1prep |> 
+  filter(variable%in%c("Reticulocytes","Targeted killing"),pABA!="Control") |>
+  pivot_wider(names_from="variable",values_from="value") |>
+  filter(rep%in%sample(1:2000,100)) -> sm1indiv
+  
+ggplot()+
+  geom_path(data=sm1indiv |> filter(pABA!="Control"),aes(x=Reticulocytes,y=`Targeted killing`,group=mouseid,col=pABA),alpha=0.05)+
+  geom_path(dat=swirls |> filter(pABA!="Control"),aes(x=R,y=W,col=pABA),linewidth=1.5)+
+  ylim(10^5,10^8)+
+  scale_x_log10()+scale_y_log10()+
+  scale_colour_manual(values=cbPalette)+
+  xlab("Reticulocyte supply")+ylab("Targeted killing")+
+  theme_bw()+
+  facet_wrap(pABA~.)+
+  theme(
+    panel.grid = element_blank(),
+    legend.position = "none",
+    strip.background = element_blank()
+  )
+  
+```
+
+## Indiscriminate killing vs. reticulocytes: individual trajectories with low opacity
+
+
+```{r indivLowOpacNR, echo = FALSE}
+sm1prep |> 
+  filter(variable%in%c("Reticulocytes","Indiscriminate killing"),pABA!="Control") |>
+  pivot_wider(names_from="variable",values_from="value") |>
+  filter(rep%in%sample(1:2000,100)) -> sm1indiv
+  
+ggplot()+
+  geom_path(data=sm1indiv |> filter(pABA!="Control"),aes(x=Reticulocytes,y=`Indiscriminate killing`,group=mouseid,col=pABA),alpha=0.05)+
+  geom_path(dat=swirls |> filter(pABA!="Control"),aes(x=R,y=N,col=pABA),linewidth=1.5)+
+  ylim(10^5,10^8)+
+  scale_x_log10()+scale_y_log10()+
+  scale_colour_manual(values=cbPalette)+
+  xlab("Reticulocyte supply")+ylab("Indiscriminate killing")+
+  theme_bw()+
+  facet_wrap(pABA~.)+
+  theme(
+    panel.grid = element_blank(),
+    legend.position = "none",
+    strip.background = element_blank(),
+  )
+  
 ```
