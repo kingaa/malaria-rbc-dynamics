@@ -3,8 +3,8 @@ title: "POMP group-level results - All boxes"
 author: "Madeline Peters, Aaron King"
 date: "`r Sys.Date()`"
 output:
-  html_document: default
   pdf_document: default
+  html_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -242,6 +242,9 @@ sm1 |>
     lambda_n=Beta*(R+E)/M*Qpn,
     lambda_w=Beta*(R+E)/M*Qpw,
     lambda_u=Beta-lambda_r-lambda_e-lambda_n-lambda_w,
+    lambda_u_w_ratio=lambda_u/lambda_w,
+    lambda_u_n_ratio=lambda_u/lambda_n,
+    lambda_u_wn_ratio=lambda_u/(lambda_w+lambda_n),
     loss=(R+E)*(1-Qus),
     rbc=E+R,
     varN=N/rbc,
@@ -443,6 +446,30 @@ ggarrange(full.WK,                                                 # First row w
 
 ```
 
+```{r WversusKwithError, echo=FALSE}
+
+group_traj |>
+  filter(variable%in%c("K","W")) |>
+  filter(time%in%5:7) |>
+  pivot_longer(lo:hi) |>
+  pivot_wider(names_from=c(variable,name),values_from=value,names_sep="_") -> WKerr
+
+ggplot()+
+  geom_errorbar(data=WKerr,aes(x=K_med,ymin = W_lo,ymax = W_hi,col = pABA))+
+  geom_errorbarh(data=WKerr,aes(y=W_med,xmin = K_lo,xmax = K_hi,col=pABA))+
+  geom_path(data=swirls|>filter(time%in%5:7),aes(x=K,y=W,color=pABA),linewidth=2)+
+  geom_text(data=swirls |> filter(time%in%c(5,6,7)),aes(x=K,y=W,label=time),col="black",size=5)+
+  scale_x_log10()+scale_y_log10()+
+  scale_colour_manual(values=cbPalette)+
+  xlab("Parasite density")+ylab("Targeted killing")+
+  theme_bw()+
+  theme(
+    panel.grid = element_blank(),
+    legend.position = "none"
+  )
+
+```
+
 ## Indiscriminate killing versus reticulocyte supply
 
 ```{r NversusR, echo=FALSE}
@@ -498,6 +525,30 @@ ggarrange(full.NR,                                                 # First row w
           ) 
 
 ```
+
+```{r NversusRwithError, echo=FALSE}
+
+group_traj |>
+  filter(variable%in%c("N","R")) |>
+  filter(time<=6) |>
+  pivot_longer(lo:hi) |>
+  pivot_wider(names_from=c(variable,name),values_from=value,names_sep="_") -> NRerr
+
+ggplot()+
+  geom_errorbar(data=NRerr,aes(x=R_med,ymin = N_lo,ymax = N_hi,col = pABA))+
+  geom_errorbarh(data=NRerr,aes(y=N_med,xmin = R_lo,xmax = R_hi,col=pABA))+
+  geom_path(data=swirls|>filter(time<=6),aes(x=R,y=N,color=pABA),linewidth=2)+
+  geom_text(data=swirls |> filter(time<=6),aes(x=R,y=N,label=time),col="black",size=5)+
+  scale_x_log10()+scale_y_log10()+
+  scale_colour_manual(values=cbPalette)+
+  xlab("Reticulocyte supply")+ylab("Indiscriminate killing")+
+  theme_bw()+
+  theme(
+    panel.grid = element_blank(),
+    legend.position = "none"
+  )
+```
+
 
 ## Targeted killing versus reticulocyte supply
 
@@ -695,45 +746,69 @@ ggplot()+
   )
 ```
 
-# Prepare data for plotting individual trajectories at low opacity
+## Ratio of $lambda_u$ to $lambda_w$ over time
 
-```{r sm1prep, echo=FALSE}
-sm1 |>
-  filter(mouseid!="01-02",mouseid!="02-03") |>
-  separate_wider_delim(mouseid,delim="-",names=c("box","mouse"),cols_remove=FALSE) |>
-  mutate(mouse=case_match(mouse,
-                          "01"~"A",
-                          "02"~"B",
-                          "03"~"C"),
-         pABA=case_match(box,
-                         "01"~"5%",
-                         "02"~"0.5%",
-                         "03"~"0.05%",
-                         "04"~"0%",
-                         "05"~"Control"),
-         variable=case_match(variable,
-                             "K"~"Parasites",
-                             "R"~"Reticulocytes",
-                             "E"~"Erythrocytes",
-                             "N"~"Indiscriminate killing",
-                             "W"~"Targeted killing",
-                             "M"~"Merozoites")) -> sm1prep
-head(sm1prep)
+```{r lambdaUtolambdaW, echo=FALSE}
+group_traj |>
+  filter(time<=20,variable%in%c("lambda_u_w_ratio")) |>
+  mutate(variable=case_match(variable,
+                             "lambda_u_w_ratio"~"lambda_u:lambda_w")) |>
+  ggplot()+
+  geom_line(aes(x=time,y=med,color=pABA),linewidth=2)+
+  geom_ribbon(aes(x=time,ymin=lo,ymax=hi,fill=pABA),alpha=0.2)+
+  geom_vline(xintercept=peak.day,linetype="dashed",col="grey")+
+  scale_y_log10()+
+  scale_colour_manual(values=cbPalette[2:7])+
+  scale_fill_manual(values=cbPalette[2:7])+
+  xlab("Day")+ylab(expression(lambda[U]:lambda[W]))+
+  theme_bw()+
+  theme(strip.background=element_blank(),
+        panel.grid = element_blank()
+  )
 ```
 
-## Targeted killing vs. parasites: individual trajectories with low opacity
+## Ratio of $lambda_u$ to $lambda_w$+$lambda_n$ over time
 
+```{r lambdaUtolambdaWN, echo=FALSE}
+group_traj |>
+  filter(time<=20,variable%in%c("lambda_u_wn_ratio")) |>
+  mutate(variable=case_match(variable,
+                             "lambda_u_wn_ratio"~"lambda_u:(lambda_w+lambda_n)")) |>
+  ggplot()+
+  geom_line(aes(x=time,y=med,color=pABA),linewidth=2)+
+  geom_ribbon(aes(x=time,ymin=lo,ymax=hi,fill=pABA),alpha=0.2)+
+  geom_vline(xintercept=peak.day,linetype="dashed",col="grey")+
+  scale_y_log10()+
+  scale_colour_manual(values=cbPalette[2:7])+
+  scale_fill_manual(values=cbPalette[2:7])+
+  xlab("Day")+ylab(expression(lambda[U]:lambda[W]+lambda[N]))+
+  theme_bw()+
+  theme(strip.background=element_blank(),
+        panel.grid = element_blank()
+  )
+```
 
-```{r indivLowOpacWK, echo = FALSE}
-sm1prep |> 
-  filter(variable%in%c("Parasites","Targeted killing"),pABA!="Control") |>
-  pivot_wider(names_from="variable",values_from="value") |>
-  filter(rep%in%sample(1:2000,100)) -> sm1indiv
-  
+## Read in data of weighted individual trajectories
+
+```{r dataWeighted, echo=FALSE}
+data_weighted <- read_csv("~/Documents/GitHub/bdd/sindy/data_weighted.csv")
+
+data_weighted$W[which(data_weighted$box=="05")]<-0
+
+data_weighted$pABA <- factor(data_weighted$box,levels=c("05","04","03","02","01"),
+                            labels=c("Control","0%","0.05%","0.5%","5%"))
+
+```
+
+## Plot individual weighted trajectories with group-level trajectories
+```{r individualAndGroup, echo=FALSE}
+group_traj |>
+  select(-lo,-hi) |>
+  pivot_wider(names_from="variable",values_from="med") -> group_traj_wide
+
 ggplot()+
-  geom_path(data=sm1indiv |> filter(pABA!="Control"),aes(x=Parasites,y=`Targeted killing`,group=mouseid,col=pABA),alpha=0.05)+
-  geom_path(dat=swirls |> filter(pABA!="Control"),aes(x=K,y=W,col=pABA),linewidth=1.5)+
-  ylim(10^5,10^8)+
+  geom_path(data=data_weighted,aes(x=K,y=W,group=interaction(rep,rep2),col=pABA),alpha=0.01)+
+  geom_path(data=group_traj_wide,aes(x=K,y=W,col=pABA))+
   scale_x_log10()+scale_y_log10()+
   scale_colour_manual(values=cbPalette)+
   xlab("Parasite density")+ylab("Targeted killing")+
@@ -741,24 +816,13 @@ ggplot()+
   facet_wrap(pABA~.)+
   theme(
     panel.grid = element_blank(),
-    legend.position = "none",
-    strip.background = element_blank()
+    strip.background = element_blank(),
+    legend.position = "none"
   )
-```
 
-## Targeted killing vs. reticulocytes: individual trajectories with low opacity
-
-
-```{r indivLowOpacWR, echo = FALSE}
-sm1prep |> 
-  filter(variable%in%c("Reticulocytes","Targeted killing"),pABA!="Control") |>
-  pivot_wider(names_from="variable",values_from="value") |>
-  filter(rep%in%sample(1:2000,100)) -> sm1indiv
-  
 ggplot()+
-  geom_path(data=sm1indiv |> filter(pABA!="Control"),aes(x=Reticulocytes,y=`Targeted killing`,group=mouseid,col=pABA),alpha=0.05)+
-  geom_path(dat=swirls |> filter(pABA!="Control"),aes(x=R,y=W,col=pABA),linewidth=1.5)+
-  ylim(10^5,10^8)+
+  geom_path(data=data_weighted,aes(x=R,y=W,group=interaction(rep,rep2),col=pABA),alpha=0.01)+
+  geom_path(data=group_traj_wide,aes(x=R,y=W,col=pABA))+
   scale_x_log10()+scale_y_log10()+
   scale_colour_manual(values=cbPalette)+
   xlab("Reticulocyte supply")+ylab("Targeted killing")+
@@ -766,25 +830,13 @@ ggplot()+
   facet_wrap(pABA~.)+
   theme(
     panel.grid = element_blank(),
-    legend.position = "none",
-    strip.background = element_blank()
+    strip.background = element_blank(),
+    legend.position = "none"
   )
-  
-```
 
-## Indiscriminate killing vs. reticulocytes: individual trajectories with low opacity
-
-
-```{r indivLowOpacNR, echo = FALSE}
-sm1prep |> 
-  filter(variable%in%c("Reticulocytes","Indiscriminate killing"),pABA!="Control") |>
-  pivot_wider(names_from="variable",values_from="value") |>
-  filter(rep%in%sample(1:2000,100)) -> sm1indiv
-  
 ggplot()+
-  geom_path(data=sm1indiv |> filter(pABA!="Control"),aes(x=Reticulocytes,y=`Indiscriminate killing`,group=mouseid,col=pABA),alpha=0.05)+
-  geom_path(dat=swirls |> filter(pABA!="Control"),aes(x=R,y=N,col=pABA),linewidth=1.5)+
-  ylim(10^5,10^8)+
+  geom_path(data=data_weighted,aes(x=R,y=N,group=interaction(rep,rep2),col=pABA),alpha=0.01)+
+  geom_path(data=group_traj_wide,aes(x=R,y=N,col=pABA))+
   scale_x_log10()+scale_y_log10()+
   scale_colour_manual(values=cbPalette)+
   xlab("Reticulocyte supply")+ylab("Indiscriminate killing")+
@@ -792,8 +844,7 @@ ggplot()+
   facet_wrap(pABA~.)+
   theme(
     panel.grid = element_blank(),
-    legend.position = "none",
     strip.background = element_blank(),
+    legend.position = "none"
   )
-  
 ```
