@@ -363,8 +363,9 @@ group_traj |>
   select(-lo,-hi) |>
   pivot_wider(names_from="variable",values_from="med") |>
   ggplot()+
-  geom_text(aes(x=E,y=R,col=pABA,label=time))+
-  scale_colour_manual(values=cbPalette[c(1,2)],name=NULL)+
+  geom_text(aes(x=E,y=R,label=time))+
+  geom_path(aes(x=E,y=R,col=type))+
+  scale_colour_manual(values=cbPalette[c(2,1)],name=NULL)+
   xlab("Erythrocytes (density per microlitre)")+ylab("Reticulocytes (density per microlitre)")+
   theme_bw()+
   theme(strip.background=element_blank(),
@@ -430,19 +431,19 @@ ggsave("ReticvsEryth_UninfectedInfected_indiv.png",plot=ReticvsEryth_UninfInf,
 #####################
 #Plot group-level trajectories for reticulocytes
 (RvsDay_pABA<-group_traj |>
-    filter(time<=30,variable%in%c("R")) |>
+    filter(time>=7,time<=10,variable%in%c("E"),pABA!="Uninfected") |>
     ggplot()+
     geom_line(aes(x=time,y=med,color=pABA),linewidth=2)+
     geom_ribbon(aes(x=time,ymin=lo,ymax=hi,fill=pABA),alpha=0.2)+
     scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x), 
                   labels=trans_format('log10',math_format(10^.x)))+ 
-    scale_colour_manual(values=cbPalette,name="[pABA] (%)")+
-    scale_fill_manual(values=cbPalette,name="[pABA] (%)")+
-    xlab("Day")+ylab("Reticulocytes (density per microlitre)")+
+    scale_colour_manual(values=cbPalette[2:5],name="[pABA] (%)")+
+    scale_fill_manual(values=cbPalette[2:5],name="[pABA] (%)")+
+    xlab("Day")+ylab("Erythrocytes (density per microlitre)")+
     theme_bw()+
     theme(strip.background=element_blank(),
           panel.grid = element_blank(),
-          legend.position=c(0.2,0.7),
+          legend.position=c(0.2,0.2),
           axis.title=element_text(size=15),
           axis.text=element_text(size=13),
           legend.text=element_text(size=14),
@@ -621,16 +622,16 @@ ggsave("ReticvsEryth_pABA_0to6.png",plot=RvsDay_pABA_0to6,
 
 
 #Plot group-level trajectories for reticulocytes
-(RvsDay_pABA_0to6_facet<-group_traj |>
-    filter(time<=6,variable%in%c("R"),pABA!="Uninfected") |>
+(RvsDay_pABA_0to7_facet<-group_traj |>
+    filter(time<=7,variable%in%c("R"),pABA!="Uninfected") |>
     ggplot()+
     geom_line(data=group_traj |>
-                filter(time<=6,variable%in%c("R"),pABA=="Uninfected") |> 
+                filter(time<=7,variable%in%c("R"),pABA=="Uninfected") |> 
                 select(-pABA),
               aes(x=time,y=med),color=cbPalette[1],linewidth=2)+
     
     geom_ribbon(data=group_traj |>
-                filter(time<=6,variable%in%c("R"),pABA=="Uninfected") |> 
+                filter(time<=7,variable%in%c("R"),pABA=="Uninfected") |> 
                 select(-pABA),
               aes(x=time,ymin=lo,ymax=hi),fill=cbPalette[1],alpha=0.2)+
     geom_line(aes(x=time,y=med,color=pABA),linewidth=2)+
@@ -653,7 +654,7 @@ ggsave("ReticvsEryth_pABA_0to6.png",plot=RvsDay_pABA_0to6,
     )
 )
 
-ggsave("ReticvsEryth_pABA_0to6_facet.png",plot=RvsDay_pABA_0to6_facet,
+ggsave("ReticvsEryth_pABA_0to7_facet.png",plot=RvsDay_pABA_0to7_facet,
        path="~/Documents/GitHub/bdd/nw11_hier/final_files/POMP_GroupLevel_figures/",
        width=15,height=12,units="cm",dpi=600)
 
@@ -889,4 +890,9 @@ group_traj |>
         legend.title=element_text(size=15)
   )
 
+tmp<-group_traj |>
+  filter(time<6,variable%in%c("R","E"),pABA!="Uninfected") |>
+  select(-lo,-hi) |>
+  pivot_wider(names_from="variable",values_from="med")
 
+lm1<-lm(R~time:box+box,data=tmp)
