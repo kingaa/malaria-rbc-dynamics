@@ -19,10 +19,11 @@ library(doParallel)
 library(pomp)
 library(panelPomp)
 library(ggpubr)
+library(scales)
 ```
 
 ## Set working directory
-
+Change working directory to directory with "data.csv", "m5pf4.rds" and "m5sm1.rds" files.
 ```{r directory}
 setwd("~/Documents/GitHub/bdd/nw11_hier/final_files/")
 ```
@@ -273,7 +274,7 @@ group_traj <- group_traj |> dplyr::slice(-which(group_traj$box=="05"&group_traj$
 
 # Data visualisation
 
-## Does infected alter reticulocyte supply as a function of time?
+## Does infection alter reticulocyte supply as a function of time?
 ```{r ReticvsTime_UninfInf}
 group_traj_UninfInf<-group_traj |>
   filter(pABA%in%c("Uninfected","0%")) |>
@@ -302,8 +303,10 @@ group_traj_UninfInf |>
     legend.text=element_text(size=14))
 ```
 
+### Does reticulocyte supply change over time 
+
 ## Is reticulocyte supply a linear function of erythrocyte density?
-```{r ReticvsTime_UninfInf}
+```{r ReticvsEryth_UninfInf}
 group_traj_UninfInf |>
   filter(variable%in%c("E","R")) |>
   select(-lo,-hi) |>
@@ -325,7 +328,7 @@ group_traj_UninfInf |>
 ```
 
 ## Can reticulocyte supply during infection be divided into separate phases?
-```{r ReticvsTime_UninfInf}
+```{r ReticvsTime_Phases_UninfInf}
 group_traj_UninfInf |>
   filter(variable=="R") |>
   ggplot()+
@@ -357,4 +360,211 @@ group_traj_UninfInf |>
     axis.title=element_text(size=15),
     axis.text=element_text(size=13),
     legend.text=element_text(size=14))
+```
+
+```{r ReticvsEryth_Phase3_UninfInf}
+group_traj_UninfInf |>
+  filter(variable%in%c("E","R"),time>10) |>
+  select(-lo,-hi) |>
+  pivot_wider(names_from="variable",values_from="med") |>
+  ggplot()+
+  geom_smooth(aes(x=E,y=R,col=status),method="lm")+
+  geom_text(aes(x=E,y=R,label=time,col=status))+
+  scale_colour_manual(values=cbPalette[c(2,1)],name=NULL)+
+  xlab("Erythrocytes (density per microlitre)")+
+  ylab("Reticulocyte supply (density per microlitre)")+
+  theme_bw()+
+  theme(
+    strip.background=element_blank(),
+    panel.grid = element_blank(),
+    legend.position=c(0.8,0.8),
+    axis.title=element_text(size=15),
+    axis.text=element_text(size=13),
+    legend.text=element_text(size=14))
+```
+
+## Are these phases replicated with different parasite growth rates?
+```{r ReticvsTime_Phases_pABA}
+group_traj |>
+  filter(variable=="R") |>
+  ggplot()+
+  geom_hline(yintercept=10^7,col=NA)+
+  geom_ribbon(aes(x=time,ymin=lo,ymax=hi,fill=pABA),alpha=0.2)+
+  geom_line(aes(x=time,y=med,col=pABA),linewidth=2)+
+  geom_bracket(
+      xmin = 0.1, xmax = 6.9, y.position = 6.75,
+      label = "Manipulation\nresponse", tip.length = c(0.01, 0.01),hjust=0.5
+    )+
+  geom_bracket(
+      xmin = 7.1, xmax = 9.9, y.position = 6.75,
+      label = "Stress\nerythropoiesis", tip.length = c(0.01, 0.01),hjust=0.5
+    )+
+  geom_bracket(
+      xmin = 10.1, xmax = 29.9, y.position = 6.75,
+      label = "Reticulocyte supply ~ erythrocyte density", tip.length = c(0.01, 0.01),hjust=0.5
+    )+
+  scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x), 
+                  labels=trans_format('log10',math_format(10^.x)))+ 
+  scale_colour_manual(values=cbPalette,name=NULL)+
+    scale_fill_manual(values=cbPalette,name=NULL)+
+  xlab("Day post-infection")+
+  ylab("Reticulocyte supply (density per microlitre)")+
+  theme_bw()+
+  theme(
+    strip.background=element_blank(),
+    panel.grid = element_blank(),
+    legend.position=c(0.2,0.6),
+    legend.background=element_blank(),
+    axis.title=element_text(size=15),
+    axis.text=element_text(size=13),
+    legend.text=element_text(size=14))
+
+```
+
+## Is reticulocyte supply dependent on parasite growth rate during phase 1 (d0-7)?
+```{r ReticvsTime_Phase1_pABA}
+group_traj |>
+    filter(time<=7,variable%in%c("R"),pABA!="Uninfected") |>
+    ggplot()+
+    geom_line(data=group_traj |>
+                filter(time<=7,variable%in%c("R"),pABA=="Uninfected") |> 
+                select(-pABA),
+              aes(x=time,y=med),color=cbPalette[1],linewidth=2)+
+    
+    geom_ribbon(data=group_traj |>
+                filter(time<=7,variable%in%c("R"),pABA=="Uninfected") |> 
+                select(-pABA),
+              aes(x=time,ymin=lo,ymax=hi),fill=cbPalette[1],alpha=0.2)+
+    geom_line(aes(x=time,y=med,color=pABA),linewidth=2)+
+    geom_ribbon(aes(x=time,ymin=lo,ymax=hi,fill=pABA),alpha=0.2)+
+    scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x), 
+                  labels=trans_format('log10',math_format(10^.x)))+ 
+    scale_colour_manual(values=cbPalette[2:5],name="[pABA] (%)")+
+    scale_fill_manual(values=cbPalette[2:5],name="[pABA] (%)")+
+    xlab("Day")+ylab("Reticulocytes (density per microlitre)")+
+    theme_bw()+
+    facet_wrap(pABA~.)+
+    theme(strip.background=element_blank(),
+          panel.grid = element_blank(),
+          legend.position="none",
+          axis.title=element_text(size=15),
+          axis.text=element_text(size=13),
+          legend.text=element_text(size=14),
+          legend.title=element_text(size=15),
+          strip.text=element_text(size=15)
+    )
+```
+
+## Does reticulocyte supply depend on parasite growth rate during phase 2 (d8-10)?
+```{r ReticvsTime_Phase2_pABA}
+group_traj |>
+    filter(time>7,time<11,variable%in%c("R"),pABA!="Uninfected") |>
+    ggplot()+
+    geom_line(aes(x=time,y=med,color=pABA),linewidth=2)+
+    geom_ribbon(aes(x=time,ymin=lo,ymax=hi,fill=pABA),alpha=0.2)+
+    scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x), 
+                  labels=trans_format('log10',math_format(10^.x)))+ 
+    scale_colour_manual(values=cbPalette[2:5],name="[pABA] (%)")+
+    scale_fill_manual(values=cbPalette[2:5],name="[pABA] (%)")+
+    xlab("Day")+ylab("Reticulocytes (density per microlitre)")+
+    theme_bw()+
+    theme(strip.background=element_blank(),
+          panel.grid = element_blank(),
+          legend.position="right",
+          axis.title=element_text(size=15),
+          axis.text=element_text(size=13),
+          legend.text=element_text(size=14),
+          legend.title=element_text(size=15),
+          strip.text=element_text(size=15)
+    )
+```
+
+## Does a model of reticulocyte supply as a function of time (phase 2, d8-10) with separate slope and intercept for each pABA treatment perform better than a single slope and intercept?
+```{r ReticsvsTime_Phase2_pABA_lm}
+tmp<-group_traj |>
+    filter(time>7,time<11,variable%in%c("R"),pABA!="Uninfected")
+
+lm1<-lm(med~time,data=tmp)
+lm2<-lm(med~time:pABA+pABA,data=tmp)
+
+anova(lm1,lm2)
+```
+
+## Do erythrocyte densities vary with parasite growth rate during phase 2 (d8-10)?
+
+```{r ErythvsTime_Phase2_pABA}
+group_traj |>
+    filter(time>7,time<11,variable%in%c("E"),pABA!="Uninfected") |>
+    ggplot()+
+    geom_line(aes(x=time,y=med,color=pABA),linewidth=2)+
+    geom_ribbon(aes(x=time,ymin=lo,ymax=hi,fill=pABA),alpha=0.2)+
+    scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x), 
+                  labels=trans_format('log10',math_format(10^.x)))+ 
+    scale_colour_manual(values=cbPalette[2:5],name="[pABA] (%)")+
+    scale_fill_manual(values=cbPalette[2:5],name="[pABA] (%)")+
+    xlab("Day")+ylab("Reticulocytes (density per microlitre)")+
+    theme_bw()+
+    theme(strip.background=element_blank(),
+          panel.grid = element_blank(),
+          legend.position="right",
+          axis.title=element_text(size=15),
+          axis.text=element_text(size=13),
+          legend.text=element_text(size=14),
+          legend.title=element_text(size=15),
+          strip.text=element_text(size=15)
+    )
+```
+
+```{r ReticvsEryth_Phase3_pABA}
+group_traj |>
+  filter(variable%in%c("E","R"),time>10) |>
+  select(-lo,-hi) |>
+  pivot_wider(names_from="variable",values_from="med") |>
+  ggplot()+
+  geom_smooth(aes(x=E,y=R,col=pABA),method="lm")+
+  geom_text(aes(x=E,y=R,label=time,col=pABA))+
+  scale_colour_manual(values=cbPalette,name=NULL)+
+  xlab("Erythrocytes (density per microlitre)")+
+  ylab("Reticulocyte supply (density per microlitre)")+
+  theme_bw()+
+  theme(
+    strip.background=element_blank(),
+    panel.grid = element_blank(),
+    legend.position=c(0.8,0.8),
+    axis.title=element_text(size=15),
+    axis.text=element_text(size=13),
+    legend.text=element_text(size=14))
+
+group_traj |>
+  filter(variable%in%c("E","R"),time>10) |>
+  select(-lo,-hi) |>
+  pivot_wider(names_from="variable",values_from="med") |>
+  ggplot()+
+  geom_smooth(aes(x=E,y=R),method="lm")+
+  geom_text(aes(x=E,y=R,label=time,col=pABA))+
+  scale_colour_manual(values=cbPalette,name=NULL)+
+  xlab("Erythrocytes (density per microlitre)")+
+  ylab("Reticulocyte supply (density per microlitre)")+
+  theme_bw()+
+  theme(
+    strip.background=element_blank(),
+    panel.grid = element_blank(),
+    legend.position=c(0.8,0.8),
+    axis.title=element_text(size=15),
+    axis.text=element_text(size=13),
+    legend.text=element_text(size=14))
+```
+
+## Does a linear regression of reticulocyte supply over erythrocyte density with pABA-dependent slope and intercept perform better than a general model of reticulocyte supply over erythrocyte density?
+
+```{r ReticsvsEryth_Phase3_pABA_lm}
+tmp<-group_traj |>
+    filter(time>10,variable%in%c("R","E"),pABA!="Uninfected") |>
+  select(-lo,-hi) |>
+  pivot_wider(names_from="variable",values_from="med")
+
+lm1<-lm(R~E,data=tmp)
+lm2<-lm(R~E:pABA+pABA,data=tmp)
+
+anova(lm1,lm2)
 ```
