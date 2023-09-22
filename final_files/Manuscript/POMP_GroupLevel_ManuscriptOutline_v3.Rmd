@@ -1,0 +1,689 @@
+---
+title: "POMP_GroupLevel_ManuscriptOutline_v3"
+author: "Madeline Peters, Aaron King, Nina Wale"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Set-up
+
+## Packages
+```{r packages, include=FALSE}
+library(tidyverse)
+library(stringi)
+library(doParallel)
+library(pomp)
+library(panelPomp)
+library(ggpubr)
+library(scales)
+library(Rbeast)
+library(tseries)
+```
+
+## Set working directory
+Working directory should contain the files "POMP_GroupLevel_DataPrep.R", "m5pf4.rds", and "m6sm1.rds", the latter two of which are available from the "bdd" GitHub directory under "code/results".
+```{r setwd}
+setwd("~/Documents/GitHub/bdd/nw11_hier/final_files/Manuscript/")
+```
+
+## Set colour palette
+```{r palette}
+cbPalette <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+```
+
+## Load in and prepare data
+The object "flow" is the original, raw data, while "group_traj" contains the group-level median and confidence intervals for a number of variables output by the model.
+```{r data}
+source("POMP_GroupLevel_DataPrep.R")
+```
+
+# Analysis
+
+## Uninfected versus infected
+First we'll create a data frame that contains ONLY the uninfected (i.e., control) mice and the mice receiving the 0% pABA treatment.
+```{r UninfInfDF}
+group_UninfInf <- group_traj |>
+  filter(time<=21,
+         pABA%in%c("Uninfected","0%"),
+         variable%in%c("E","R","K","N","W","Qpn","Qps","Qun","Qpw","Qus","Nq")) |>
+  mutate(type=case_match(pABA,
+                         "Uninfected"~"Uninfected",
+                         "0%"~"Infected"),
+         variable_name=case_match(variable,
+                                  "E"~"Erythrocytes",
+                                  "R"~"Reticulocytes",
+                                  "K"~"Parasites",
+                                  "N"~"Indiscriminate killing",
+                                  "W"~"Targeted killing",
+                                  "Qpn"~"Qpn",
+                                  "Qps"~"Qps",
+                                  "Qun"~"Qun",
+                                  "Qpw"~"Qpw",
+                                  "Qus"~"Qus",
+                                  "Nq"~"Nq"))
+head(group_UninfInf)
+```
+
+### Q: Are the time series of reticulocyte supply and indicriminate killing stationary?
+```{r stationarity}
+dfUninf<-group_UninfInf |>
+  filter(pABA=="Uninfected",variable%in%c("R","N"),time<=21) |>
+  select(-lo,-hi,-variable_name) |>
+  pivot_wider(names_from="variable",values_from="med")
+
+yRUninf<-dfUninf$R
+yNUninf<-dfUninf$N
+
+df0<-group_UninfInf |>
+  filter(pABA=="0%",variable%in%c("R","N"),time<=21) |>
+  select(-lo,-hi,-variable_name) |>
+  pivot_wider(names_from="variable",values_from="med")
+
+yR0<-df0$R
+yN0<-df0$N
+
+adf.test(yRUninf)
+adf.test(yNUninf)
+adf.test(yR0)
+adf.test(yN0)
+```
+
+### Q: Can the time series of reticulocyte supply and indiscriminate killing be divided into distinct phases?
+Use BEAST package to detect change points in reticulocyte and indiscriminate killing time series for both pABA = 0% (infected) and uninfected treatments.
+```{r InfPhaseTest, include=FALSE}
+dfUninf<-group_UninfInf |>
+  filter(pABA=="Uninfected",variable%in%c("R","N"),time<=21) |>
+  select(-lo,-hi,-variable_name) |>
+  pivot_wider(names_from="variable",values_from="med")
+
+yRUninf<-dfUninf$R
+yNUninf<-dfUninf$N
+
+beastRUninf<-beast(yRUninf,season="none")
+beastNUninf<-beast(yNUninf,season="none")
+
+df0<-group_UninfInf |>
+  filter(pABA=="0%",variable%in%c("R","N"),time<=21) |>
+  select(-lo,-hi,-variable_name) |>
+  pivot_wider(names_from="variable",values_from="med")
+
+yR0<-df0$R
+yN0<-df0$N
+
+beastR0<-beast(yR0,season="none")
+beastN0<-beast(yN0,season="none")
+```
+
+Print the results:
+```{r beastresults}
+ncpRUninf<-which(beastRUninf$trend$ncpPr==max(beastRUninf$trend$ncpPr))-1
+paste("Number of change points for reticulocytes in the uninfected group is ",ncpRUninf,sep="")
+if (ncpRUninf>0){
+  paste("A change point for reticulocytes in the uninfected group is ",beastRUninf$trend$cp[1:ncpRUninf]," or day ",beastRUninf$trend$cp[1:ncpRUninf]-1,sep="")
+}
+
+ncpNUninf<-which(beastNUninf$trend$ncpPr==max(beastNUninf$trend$ncpPr))-1
+paste("Number of change points for indiscriminate killing in the uninfected group is ",ncpNUninf,sep="")
+if (ncpNUninf>0){
+  paste("A change point for indiscriminate killing in the uninfected group is ",beastNUninf$trend$cp[1:ncpNUninf]," or day ",beastNUninf$trend$cp[1:ncpNUninf]-1,sep="")
+}
+
+ncpR0<-which(beastR0$trend$ncpPr==max(beastR0$trend$ncpPr))-1
+paste("Number of change points for reticulocytes in the infected group is ",ncpR0,sep="")
+if (ncpR0>0){
+  paste("A change point for reticulocytes in the infected group is ",beastR0$trend$cp[1:ncpR0]," or day ",beastR0$trend$cp[1:ncpR0]-1,sep="")
+}
+
+ncpN0<-which(beastN0$trend$ncpPr==max(beastN0$trend$ncpPr))-1
+paste("Number of change points for indiscriminate killing in the infected group is ",ncpN0,sep="")
+if (ncpN0>0){
+  paste("A change point for indiscriminate killing in the infected group is ",beastN0$trend$cp[1:ncpN0]," or day ",beastN0$trend$cp[1:ncpN0]-1,sep="")
+}
+
+```
+
+Visualise the results of the BEAST package:
+```{r beastplots}
+plot(beastRUninf)
+plot(beastNUninf)
+plot(beastR0)
+plot(beastN0)
+```
+
+
+### Q: After the change point, does infection alter the relationship between reticulocytes and lagged erythrocytes?
+```{r reticlm}
+group_UninfInf_Pt2<-group_UninfInf |>
+  filter(variable%in%c("E","R","N")) |>
+  select(-lo,-hi,-variable_name) |>
+  pivot_wider(names_from="variable",values_from="med") |>
+  mutate(lagE=lag(E)) |>
+  filter(time>=10,time<=21)
+
+group_UninfInf_Pt2 |>
+  ggplot()+
+  geom_point(aes(x=lagE,y=R,col=type))+
+  geom_smooth(aes(x=lagE,y=R),method="lm")+
+  scale_colour_manual(values=cbPalette[c(2,1)],name=NULL)+
+  xlab("lagged Erythrocytes (density per microlitre)")+
+  ylab("Reticulocyte supply (density per microlitre)")+
+  theme_bw()+
+  theme(
+    strip.background=element_blank(),
+    panel.grid = element_blank(),
+    legend.position=c(0.8,0.8),
+    axis.title=element_text(size=15),
+    axis.text=element_text(size=13),
+    legend.text=element_text(size=14))
+
+
+model.1<-lm(R~lagE,data=group_UninfInf_Pt2)
+model.2<-lm(R~lagE*type+type,data=group_UninfInf_Pt2)
+
+anova(model.1,model.2)
+```
+
+### Q: After the change point, does infection alter the relationship between indiscriminate killing and lagged erythrocytes?
+```{r reticlm}
+group_UninfInf_Pt2 |>
+  ggplot()+
+  geom_point(aes(x=lagE,y=N,col=type))+
+  geom_smooth(aes(x=lagE,y=N),method="lm")+
+  scale_colour_manual(values=cbPalette[c(2,1)],name=NULL)+
+  xlab("lagged Erythrocytes (density per microlitre)")+
+  ylab("Indiscriminate killing (density per microlitre)")+
+  theme_bw()+
+  theme(
+    strip.background=element_blank(),
+    panel.grid = element_blank(),
+    legend.position=c(0.8,0.8),
+    axis.title=element_text(size=15),
+    axis.text=element_text(size=13),
+    legend.text=element_text(size=14))
+
+
+model.1<-lm(N~lagE,data=group_UninfInf_Pt2)
+model.2<-lm(N~lagE*type+type,data=group_UninfInf_Pt2)
+
+anova(model.1,model.2)
+```
+### What is the median lifespan of an RBC born on d0, 7 10 and 15?
+```{r lifespanCalc}
+#Uninfected
+group_traj |> filter(pABA=="Uninfected",variable=="Qus") |>
+  select(time,med) -> tmp0
+group_traj |> filter(time>=1,pABA=="Uninfected",variable=="Qus") |>
+  select(time,med) -> tmp1
+group_traj |> filter(time>=2,pABA=="Uninfected",variable=="Qus") |>
+  select(time,med) -> tmp2
+group_traj |> filter(time>=3,pABA=="Uninfected",variable=="Qus") |>
+  select(time,med) -> tmp3
+group_traj |> filter(time>=4,pABA=="Uninfected",variable=="Qus") |>
+  select(time,med) -> tmp4
+group_traj |> filter(time>=5,pABA=="Uninfected",variable=="Qus") |>
+  select(time,med) -> tmp5
+group_traj |> filter(time>=6,pABA=="Uninfected",variable=="Qus") |>
+  select(time,med) -> tmp6
+group_traj |> filter(time>=7,pABA=="Uninfected",variable=="Qus") |>
+  select(time,med) -> tmp7
+group_traj |> filter(time>=8,pABA=="Uninfected",variable=="Qus") |>
+  select(time,med) -> tmp8
+group_traj |> filter(time>=9,pABA=="Uninfected",variable=="Qus") |>
+  select(time,med) -> tmp9
+group_traj |> filter(time>=10,pABA=="Uninfected",variable=="Qus") |>
+  select(time,med) -> tmp10
+group_traj |> filter(time>=11,pABA=="Uninfected",variable=="Qus") |>
+  select(time,med) -> tmp11
+group_traj |> filter(time>=12,pABA=="Uninfected",variable=="Qus") |>
+  select(time,med) -> tmp12
+group_traj |> filter(time>=13,pABA=="Uninfected",variable=="Qus") |>
+  select(time,med) -> tmp13
+group_traj |> filter(time>=14,pABA=="Uninfected",variable=="Qus") |>
+  select(time,med) -> tmp14
+group_traj |> filter(time>=15,pABA=="Uninfected",variable=="Qus") |>
+  select(time,med) -> tmp15
+group_traj |> filter(time>=16,pABA=="Uninfected",variable=="Qus") |>
+  select(time,med) -> tmp16
+group_traj |> filter(time>=17,pABA=="Uninfected",variable=="Qus") |>
+  select(time,med) -> tmp17
+group_traj |> filter(time>=18,pABA=="Uninfected",variable=="Qus") |>
+  select(time,med) -> tmp18
+group_traj |> filter(time>=19,pABA=="Uninfected",variable=="Qus") |>
+  select(time,med) -> tmp19
+group_traj |> filter(time>=20,pABA=="Uninfected",variable=="Qus") |>
+  select(time,med) -> tmp20
+
+day0timeUninf <- tmp0$time[min(which(cumprod(tmp0$med)<=0.5))]
+day1timeUninf <- tmp1$time[min(which(cumprod(tmp1$med)<=0.5))]-1
+day2timeUninf <- tmp2$time[min(which(cumprod(tmp2$med)<=0.5))]-2
+day3timeUninf <- tmp3$time[min(which(cumprod(tmp3$med)<=0.5))]-3
+day4timeUninf <- tmp4$time[min(which(cumprod(tmp4$med)<=0.5))]-4
+day5timeUninf <- tmp5$time[min(which(cumprod(tmp5$med)<=0.5))]-5
+day6timeUninf <- tmp6$time[min(which(cumprod(tmp6$med)<=0.5))]-6
+day7timeUninf <- tmp7$time[min(which(cumprod(tmp7$med)<=0.5))]-7
+day8timeUninf <- tmp8$time[min(which(cumprod(tmp8$med)<=0.5))]-8
+day9timeUninf <- tmp9$time[min(which(cumprod(tmp9$med)<=0.5))]-9
+day10timeUninf <- tmp10$time[min(which(cumprod(tmp10$med)<=0.5))]-10
+day11timeUninf <- tmp11$time[min(which(cumprod(tmp11$med)<=0.5))]-11
+day12timeUninf <- tmp12$time[min(which(cumprod(tmp12$med)<=0.5))]-12
+day13timeUninf <- tmp13$time[min(which(cumprod(tmp13$med)<=0.5))]-13
+day14timeUninf <- tmp14$time[min(which(cumprod(tmp14$med)<=0.5))]-14
+day15timeUninf <- tmp15$time[min(which(cumprod(tmp15$med)<=0.5))]-15
+day16timeUninf <- tmp16$time[min(which(cumprod(tmp16$med)<=0.5))]-16
+day17timeUninf <- tmp17$time[min(which(cumprod(tmp17$med)<=0.5))]-17
+#day18timeUninf <- tmp18$time[min(which(cumprod(tmp18$med)<=0.5))]-18
+#day19timeUninf <- tmp19$time[min(which(cumprod(tmp19$med)<=0.5))]-19
+#day20timeUninf <- tmp20$time[min(which(cumprod(tmp20$med)<=0.5))]-20
+
+
+#pABA 0%
+group_traj |> filter(pABA=="0%",variable=="Qus") |>
+  select(time,med) -> tmp0
+group_traj |> filter(time>=1,pABA=="0%",variable=="Qus") |>
+  select(time,med) -> tmp1
+group_traj |> filter(time>=2,pABA=="0%",variable=="Qus") |>
+  select(time,med) -> tmp2
+group_traj |> filter(time>=3,pABA=="0%",variable=="Qus") |>
+  select(time,med) -> tmp3
+group_traj |> filter(time>=4,pABA=="0%",variable=="Qus") |>
+  select(time,med) -> tmp4
+group_traj |> filter(time>=5,pABA=="0%",variable=="Qus") |>
+  select(time,med) -> tmp5
+group_traj |> filter(time>=6,pABA=="0%",variable=="Qus") |>
+  select(time,med) -> tmp6
+group_traj |> filter(time>=7,pABA=="0%",variable=="Qus") |>
+  select(time,med) -> tmp7
+group_traj |> filter(time>=8,pABA=="0%",variable=="Qus") |>
+  select(time,med) -> tmp8
+group_traj |> filter(time>=9,pABA=="0%",variable=="Qus") |>
+  select(time,med) -> tmp9
+group_traj |> filter(time>=10,pABA=="0%",variable=="Qus") |>
+  select(time,med) -> tmp10
+group_traj |> filter(time>=11,pABA=="0%",variable=="Qus") |>
+  select(time,med) -> tmp11
+group_traj |> filter(time>=12,pABA=="0%",variable=="Qus") |>
+  select(time,med) -> tmp12
+group_traj |> filter(time>=13,pABA=="0%",variable=="Qus") |>
+  select(time,med) -> tmp13
+group_traj |> filter(time>=14,pABA=="0%",variable=="Qus") |>
+  select(time,med) -> tmp14
+group_traj |> filter(time>=15,pABA=="0%",variable=="Qus") |>
+  select(time,med) -> tmp15
+group_traj |> filter(time>=16,pABA=="0%",variable=="Qus") |>
+  select(time,med) -> tmp16
+group_traj |> filter(time>=17,pABA=="0%",variable=="Qus") |>
+  select(time,med) -> tmp17
+group_traj |> filter(time>=18,pABA=="0%",variable=="Qus") |>
+  select(time,med) -> tmp18
+group_traj |> filter(time>=19,pABA=="0%",variable=="Qus") |>
+  select(time,med) -> tmp19
+group_traj |> filter(time>=20,pABA=="0%",variable=="Qus") |>
+  select(time,med) -> tmp20
+
+day0time0 <- tmp0$time[min(which(cumprod(tmp0$med)<=0.5))]
+day1time0 <- tmp1$time[min(which(cumprod(tmp1$med)<=0.5))]-1
+day2time0 <- tmp2$time[min(which(cumprod(tmp2$med)<=0.5))]-2
+day3time0 <- tmp3$time[min(which(cumprod(tmp3$med)<=0.5))]-3
+day4time0 <- tmp4$time[min(which(cumprod(tmp4$med)<=0.5))]-4
+day5time0 <- tmp5$time[min(which(cumprod(tmp5$med)<=0.5))]-5
+day6time0 <- tmp6$time[min(which(cumprod(tmp6$med)<=0.5))]-6
+day7time0 <- tmp7$time[min(which(cumprod(tmp7$med)<=0.5))]-7
+day8time0 <- tmp8$time[min(which(cumprod(tmp8$med)<=0.5))]-8
+day9time0 <- tmp9$time[min(which(cumprod(tmp9$med)<=0.5))]-9
+day10time0 <- tmp10$time[min(which(cumprod(tmp10$med)<=0.5))]-10
+day11time0 <- tmp11$time[min(which(cumprod(tmp11$med)<=0.5))]-11
+day12time0 <- tmp12$time[min(which(cumprod(tmp12$med)<=0.5))]-12
+day13time0 <- tmp13$time[min(which(cumprod(tmp13$med)<=0.5))]-13
+day14time0 <- tmp14$time[min(which(cumprod(tmp14$med)<=0.5))]-14
+day15time0 <- tmp15$time[min(which(cumprod(tmp15$med)<=0.5))]-15
+day16time0 <- tmp16$time[min(which(cumprod(tmp16$med)<=0.5))]-16
+day17time0 <- tmp17$time[min(which(cumprod(tmp17$med)<=0.5))]-17
+day18time0 <- tmp18$time[min(which(cumprod(tmp18$med)<=0.5))]-18
+day19time0 <- tmp19$time[min(which(cumprod(tmp19$med)<=0.5))]-19
+#day20time0 <- tmp20$time[min(which(cumprod(tmp20$med)<=0.5))]-20
+
+#pABA 0.0005%
+group_traj |> filter(pABA=="0.0005%",variable=="Qus") |>
+  select(time,med) -> tmp0
+group_traj |> filter(time>=1,pABA=="0.0005%",variable=="Qus") |>
+  select(time,med) -> tmp1
+group_traj |> filter(time>=2,pABA=="0.0005%",variable=="Qus") |>
+  select(time,med) -> tmp2
+group_traj |> filter(time>=3,pABA=="0.0005%",variable=="Qus") |>
+  select(time,med) -> tmp3
+group_traj |> filter(time>=4,pABA=="0.0005%",variable=="Qus") |>
+  select(time,med) -> tmp4
+group_traj |> filter(time>=5,pABA=="0.0005%",variable=="Qus") |>
+  select(time,med) -> tmp5
+group_traj |> filter(time>=6,pABA=="0.0005%",variable=="Qus") |>
+  select(time,med) -> tmp6
+group_traj |> filter(time>=7,pABA=="0.0005%",variable=="Qus") |>
+  select(time,med) -> tmp7
+group_traj |> filter(time>=8,pABA=="0.0005%",variable=="Qus") |>
+  select(time,med) -> tmp8
+group_traj |> filter(time>=9,pABA=="0.0005%",variable=="Qus") |>
+  select(time,med) -> tmp9
+group_traj |> filter(time>=10,pABA=="0.0005%",variable=="Qus") |>
+  select(time,med) -> tmp10
+group_traj |> filter(time>=11,pABA=="0.0005%",variable=="Qus") |>
+  select(time,med) -> tmp11
+group_traj |> filter(time>=12,pABA=="0.0005%",variable=="Qus") |>
+  select(time,med) -> tmp12
+group_traj |> filter(time>=13,pABA=="0.0005%",variable=="Qus") |>
+  select(time,med) -> tmp13
+group_traj |> filter(time>=14,pABA=="0.0005%",variable=="Qus") |>
+  select(time,med) -> tmp14
+group_traj |> filter(time>=15,pABA=="0.0005%",variable=="Qus") |>
+  select(time,med) -> tmp15
+group_traj |> filter(time>=16,pABA=="0.0005%",variable=="Qus") |>
+  select(time,med) -> tmp16
+group_traj |> filter(time>=17,pABA=="0.0005%",variable=="Qus") |>
+  select(time,med) -> tmp17
+group_traj |> filter(time>=18,pABA=="0.0005%",variable=="Qus") |>
+  select(time,med) -> tmp18
+group_traj |> filter(time>=19,pABA=="0.0005%",variable=="Qus") |>
+  select(time,med) -> tmp19
+group_traj |> filter(time>=20,pABA=="0.0005%",variable=="Qus") |>
+  select(time,med) -> tmp20
+
+day0time0.0005 <- tmp0$time[min(which(cumprod(tmp0$med)<=0.5))]
+day1time0.0005 <- tmp1$time[min(which(cumprod(tmp1$med)<=0.5))]-1
+day2time0.0005 <- tmp2$time[min(which(cumprod(tmp2$med)<=0.5))]-2
+day3time0.0005 <- tmp3$time[min(which(cumprod(tmp3$med)<=0.5))]-3
+day4time0.0005 <- tmp4$time[min(which(cumprod(tmp4$med)<=0.5))]-4
+day5time0.0005 <- tmp5$time[min(which(cumprod(tmp5$med)<=0.5))]-5
+day6time0.0005 <- tmp6$time[min(which(cumprod(tmp6$med)<=0.5))]-6
+day7time0.0005 <- tmp7$time[min(which(cumprod(tmp7$med)<=0.5))]-7
+day8time0.0005 <- tmp8$time[min(which(cumprod(tmp8$med)<=0.5))]-8
+day9time0.0005 <- tmp9$time[min(which(cumprod(tmp9$med)<=0.5))]-9
+day10time0.0005 <- tmp10$time[min(which(cumprod(tmp10$med)<=0.5))]-10
+day11time0.0005 <- tmp11$time[min(which(cumprod(tmp11$med)<=0.5))]-11
+day12time0.0005 <- tmp12$time[min(which(cumprod(tmp12$med)<=0.5))]-12
+day13time0.0005 <- tmp13$time[min(which(cumprod(tmp13$med)<=0.5))]-13
+day14time0.0005 <- tmp14$time[min(which(cumprod(tmp14$med)<=0.5))]-14
+day15time0.0005 <- tmp15$time[min(which(cumprod(tmp15$med)<=0.5))]-15
+day16time0.0005 <- tmp16$time[min(which(cumprod(tmp16$med)<=0.5))]-16
+day17time0.0005 <- tmp17$time[min(which(cumprod(tmp17$med)<=0.5))]-17
+day18time0.0005 <- tmp18$time[min(which(cumprod(tmp18$med)<=0.5))]-18
+day19time0.0005 <- tmp19$time[min(which(cumprod(tmp19$med)<=0.5))]-19
+day20time0.0005 <- tmp20$time[min(which(cumprod(tmp20$med)<=0.5))]-20
+
+#pABA 0.005%
+group_traj |> filter(pABA=="0.005%",variable=="Qus") |>
+  select(time,med) -> tmp0
+group_traj |> filter(time>=1,pABA=="0.005%",variable=="Qus") |>
+  select(time,med) -> tmp1
+group_traj |> filter(time>=2,pABA=="0.005%",variable=="Qus") |>
+  select(time,med) -> tmp2
+group_traj |> filter(time>=3,pABA=="0.005%",variable=="Qus") |>
+  select(time,med) -> tmp3
+group_traj |> filter(time>=4,pABA=="0.005%",variable=="Qus") |>
+  select(time,med) -> tmp4
+group_traj |> filter(time>=5,pABA=="0.005%",variable=="Qus") |>
+  select(time,med) -> tmp5
+group_traj |> filter(time>=6,pABA=="0.005%",variable=="Qus") |>
+  select(time,med) -> tmp6
+group_traj |> filter(time>=7,pABA=="0.005%",variable=="Qus") |>
+  select(time,med) -> tmp7
+group_traj |> filter(time>=8,pABA=="0.005%",variable=="Qus") |>
+  select(time,med) -> tmp8
+group_traj |> filter(time>=9,pABA=="0.005%",variable=="Qus") |>
+  select(time,med) -> tmp9
+group_traj |> filter(time>=10,pABA=="0.005%",variable=="Qus") |>
+  select(time,med) -> tmp10
+group_traj |> filter(time>=11,pABA=="0.005%",variable=="Qus") |>
+  select(time,med) -> tmp11
+group_traj |> filter(time>=12,pABA=="0.005%",variable=="Qus") |>
+  select(time,med) -> tmp12
+group_traj |> filter(time>=13,pABA=="0.005%",variable=="Qus") |>
+  select(time,med) -> tmp13
+group_traj |> filter(time>=14,pABA=="0.005%",variable=="Qus") |>
+  select(time,med) -> tmp14
+group_traj |> filter(time>=15,pABA=="0.005%",variable=="Qus") |>
+  select(time,med) -> tmp15
+group_traj |> filter(time>=16,pABA=="0.005%",variable=="Qus") |>
+  select(time,med) -> tmp16
+group_traj |> filter(time>=17,pABA=="0.005%",variable=="Qus") |>
+  select(time,med) -> tmp17
+group_traj |> filter(time>=18,pABA=="0.005%",variable=="Qus") |>
+  select(time,med) -> tmp18
+group_traj |> filter(time>=19,pABA=="0.005%",variable=="Qus") |>
+  select(time,med) -> tmp19
+group_traj |> filter(time>=20,pABA=="0.005%",variable=="Qus") |>
+  select(time,med) -> tmp20
+
+day0time0.005 <- tmp0$time[min(which(cumprod(tmp0$med)<=0.5))]
+day1time0.005 <- tmp1$time[min(which(cumprod(tmp1$med)<=0.5))]-1
+day2time0.005 <- tmp2$time[min(which(cumprod(tmp2$med)<=0.5))]-2
+day3time0.005 <- tmp3$time[min(which(cumprod(tmp3$med)<=0.5))]-3
+day4time0.005 <- tmp4$time[min(which(cumprod(tmp4$med)<=0.5))]-4
+day5time0.005 <- tmp5$time[min(which(cumprod(tmp5$med)<=0.5))]-5
+day6time0.005 <- tmp6$time[min(which(cumprod(tmp6$med)<=0.5))]-6
+day7time0.005 <- tmp7$time[min(which(cumprod(tmp7$med)<=0.5))]-7
+day8time0.005 <- tmp8$time[min(which(cumprod(tmp8$med)<=0.5))]-8
+day9time0.005 <- tmp9$time[min(which(cumprod(tmp9$med)<=0.5))]-9
+day10time0.005 <- tmp10$time[min(which(cumprod(tmp10$med)<=0.5))]-10
+day11time0.005 <- tmp11$time[min(which(cumprod(tmp11$med)<=0.5))]-11
+day12time0.005 <- tmp12$time[min(which(cumprod(tmp12$med)<=0.5))]-12
+day13time0.005 <- tmp13$time[min(which(cumprod(tmp13$med)<=0.5))]-13
+day14time0.005 <- tmp14$time[min(which(cumprod(tmp14$med)<=0.5))]-14
+day15time0.005 <- tmp15$time[min(which(cumprod(tmp15$med)<=0.5))]-15
+day16time0.005 <- tmp16$time[min(which(cumprod(tmp16$med)<=0.5))]-16
+day17time0.005 <- tmp17$time[min(which(cumprod(tmp17$med)<=0.5))]-17
+day18time0.005 <- tmp18$time[min(which(cumprod(tmp18$med)<=0.5))]-18
+day19time0.005 <- tmp19$time[min(which(cumprod(tmp19$med)<=0.5))]-19
+day20time0.005 <- tmp20$time[min(which(cumprod(tmp20$med)<=0.5))]-20
+
+#pABA 0.05%
+group_traj |> filter(pABA=="0.05%",variable=="Qus") |>
+  select(time,med) -> tmp0
+group_traj |> filter(time>=1,pABA=="0.05%",variable=="Qus") |>
+  select(time,med) -> tmp1
+group_traj |> filter(time>=2,pABA=="0.05%",variable=="Qus") |>
+  select(time,med) -> tmp2
+group_traj |> filter(time>=3,pABA=="0.05%",variable=="Qus") |>
+  select(time,med) -> tmp3
+group_traj |> filter(time>=4,pABA=="0.05%",variable=="Qus") |>
+  select(time,med) -> tmp4
+group_traj |> filter(time>=5,pABA=="0.05%",variable=="Qus") |>
+  select(time,med) -> tmp5
+group_traj |> filter(time>=6,pABA=="0.05%",variable=="Qus") |>
+  select(time,med) -> tmp6
+group_traj |> filter(time>=7,pABA=="0.05%",variable=="Qus") |>
+  select(time,med) -> tmp7
+group_traj |> filter(time>=8,pABA=="0.05%",variable=="Qus") |>
+  select(time,med) -> tmp8
+group_traj |> filter(time>=9,pABA=="0.05%",variable=="Qus") |>
+  select(time,med) -> tmp9
+group_traj |> filter(time>=10,pABA=="0.05%",variable=="Qus") |>
+  select(time,med) -> tmp10
+group_traj |> filter(time>=11,pABA=="0.05%",variable=="Qus") |>
+  select(time,med) -> tmp11
+group_traj |> filter(time>=12,pABA=="0.05%",variable=="Qus") |>
+  select(time,med) -> tmp12
+group_traj |> filter(time>=13,pABA=="0.05%",variable=="Qus") |>
+  select(time,med) -> tmp13
+group_traj |> filter(time>=14,pABA=="0.05%",variable=="Qus") |>
+  select(time,med) -> tmp14
+group_traj |> filter(time>=15,pABA=="0.05%",variable=="Qus") |>
+  select(time,med) -> tmp15
+group_traj |> filter(time>=16,pABA=="0.05%",variable=="Qus") |>
+  select(time,med) -> tmp16
+group_traj |> filter(time>=17,pABA=="0.05%",variable=="Qus") |>
+  select(time,med) -> tmp17
+group_traj |> filter(time>=18,pABA=="0.05%",variable=="Qus") |>
+  select(time,med) -> tmp18
+group_traj |> filter(time>=19,pABA=="0.05%",variable=="Qus") |>
+  select(time,med) -> tmp19
+group_traj |> filter(time>=20,pABA=="0.05%",variable=="Qus") |>
+  select(time,med) -> tmp20
+
+day0time0.05 <- tmp0$time[min(which(cumprod(tmp0$med)<=0.5))]
+day1time0.05 <- tmp1$time[min(which(cumprod(tmp1$med)<=0.5))]-1
+day2time0.05 <- tmp2$time[min(which(cumprod(tmp2$med)<=0.5))]-2
+day3time0.05 <- tmp3$time[min(which(cumprod(tmp3$med)<=0.5))]-3
+day4time0.05 <- tmp4$time[min(which(cumprod(tmp4$med)<=0.5))]-4
+day5time0.05 <- tmp5$time[min(which(cumprod(tmp5$med)<=0.5))]-5
+day6time0.05 <- tmp6$time[min(which(cumprod(tmp6$med)<=0.5))]-6
+day7time0.05 <- tmp7$time[min(which(cumprod(tmp7$med)<=0.5))]-7
+day8time0.05 <- tmp8$time[min(which(cumprod(tmp8$med)<=0.5))]-8
+day9time0.05 <- tmp9$time[min(which(cumprod(tmp9$med)<=0.5))]-9
+day10time0.05 <- tmp10$time[min(which(cumprod(tmp10$med)<=0.5))]-10
+day11time0.05 <- tmp11$time[min(which(cumprod(tmp11$med)<=0.5))]-11
+day12time0.05 <- tmp12$time[min(which(cumprod(tmp12$med)<=0.5))]-12
+day13time0.05 <- tmp13$time[min(which(cumprod(tmp13$med)<=0.5))]-13
+day14time0.05 <- tmp14$time[min(which(cumprod(tmp14$med)<=0.5))]-14
+day15time0.05 <- tmp15$time[min(which(cumprod(tmp15$med)<=0.5))]-15
+day16time0.05 <- tmp16$time[min(which(cumprod(tmp16$med)<=0.5))]-16
+day17time0.05 <- tmp17$time[min(which(cumprod(tmp17$med)<=0.5))]-17
+day18time0.05 <- tmp18$time[min(which(cumprod(tmp18$med)<=0.5))]-18
+day19time0.05 <- tmp19$time[min(which(cumprod(tmp19$med)<=0.5))]-19
+day20time0.05 <- tmp20$time[min(which(cumprod(tmp20$med)<=0.5))]-20
+```
+
+```{r lifespanPlot}
+ggplot()+
+  geom_line(
+    aes(
+      x=seq(0,17,1),
+      y=c(day0timeUninf,
+          day1timeUninf,
+          day2timeUninf,
+          day3timeUninf,
+          day4timeUninf,
+          day5timeUninf,
+          day6timeUninf,
+          day7timeUninf,
+          day8timeUninf,
+          day9timeUninf,
+          day10timeUninf,
+          day11timeUninf,
+          day12timeUninf,
+          day13timeUninf,
+          day14timeUninf,
+          day15timeUninf,
+          day16timeUninf,
+          day17timeUninf)
+        ),
+    col=cbPalette[1]
+    )+
+  geom_line(
+    aes(
+      x=seq(0,19,1),
+      y=c(day0time0,
+          day1time0,
+          day2time0,
+          day3time0,
+          day4time0,
+          day5time0,
+          day6time0,
+          day7time0,
+          day8time0,
+          day9time0,
+          day10time0,
+          day11time0,
+          day12time0,
+          day13time0,
+          day14time0,
+          day15time0,
+          day16time0,
+          day17time0,
+          day18time0,
+          day19time0)
+    ),
+    col=cbPalette[2]
+  )+
+    geom_line(
+    aes(
+      x=seq(0,20,1),
+      y=c(day0time0.0005,
+          day1time0.0005,
+          day2time0.0005,
+          day3time0.0005,
+          day4time0.0005,
+          day5time0.0005,
+          day6time0.0005,
+          day7time0.0005,
+          day8time0.0005,
+          day9time0.0005,
+          day10time0.0005,
+          day11time0.0005,
+          day12time0.0005,
+          day13time0.0005,
+          day14time0.0005,
+          day15time0.0005,
+          day16time0.0005,
+          day17time0.0005,
+          day18time0.0005,
+          day19time0.0005,
+          day20time0.0005)
+    ),
+    col=cbPalette[3]
+  )+
+  geom_line(
+    aes(
+      x=seq(0,20,1),
+      y=c(day0time0.005,
+          day1time0.005,
+          day2time0.005,
+          day3time0.005,
+          day4time0.005,
+          day5time0.005,
+          day6time0.005,
+          day7time0.005,
+          day8time0.005,
+          day9time0.005,
+          day10time0.005,
+          day11time0.005,
+          day12time0.005,
+          day13time0.005,
+          day14time0.005,
+          day15time0.005,
+          day16time0.005,
+          day17time0.005,
+          day18time0.005,
+          day19time0.005,
+          day20time0.005)
+    ),
+    col=cbPalette[4]
+  )+
+   geom_line(
+    aes(
+      x=seq(0,20,1),
+      y=c(day0time0.05,
+          day1time0.05,
+          day2time0.05,
+          day3time0.05,
+          day4time0.05,
+          day5time0.05,
+          day6time0.05,
+          day7time0.05,
+          day8time0.05,
+          day9time0.05,
+          day10time0.05,
+          day11time0.05,
+          day12time0.05,
+          day13time0.05,
+          day14time0.05,
+          day15time0.05,
+          day16time0.05,
+          day17time0.05,
+          day18time0.05,
+          day19time0.05,
+          day20time0.05)
+    ),
+    col=cbPalette[5]
+  )+
+  xlab("Day post-infection")+ylab("Median lifespan of new RBC (days)")+
+  theme_bw()+
+  theme(strip.background=element_blank(),
+        legend.position="right",
+        axis.title=element_text(size=15),
+        axis.text=element_text(size=13),
+        legend.text=element_text(size=14)
+  )
+```
