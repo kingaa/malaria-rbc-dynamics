@@ -20,6 +20,143 @@ source("POMP_GroupLevel_DataPrep.R")
 #View group_traj data frame
 head(group_traj)
 
+
+##################################
+#### Expected lifespan of RBC ####
+##################################
+#Uninfected
+group_traj |> filter(pABA=="Uninfected",variable=="Qus") |>
+  select(time,med) -> tmp
+day0timeUninf <- tmp$time[min(which(cumprod(tmp$med)<=0.5))]
+
+group_traj |> filter(time>=7,pABA=="Uninfected",variable=="Qus") |>
+  select(time,med) -> tmp2
+day7timeUninf <- tmp2$time[min(which(cumprod(tmp2$med)<=0.5))]-7
+
+group_traj |> filter(time>=10,pABA=="Uninfected",variable=="Qus") |>
+  select(time,med) -> tmp3
+day10timeUninf <- tmp3$time[min(which(cumprod(tmp3$med)<=0.5))]-10
+  
+group_traj |> filter(time>=15,pABA=="Uninfected",variable=="Qus") |>
+  select(time,med) -> tmp4
+day15timeUninf <- tmp4$time[min(which(cumprod(tmp4$med)<=0.5))]-15
+
+#pABA 0%
+group_traj |> filter(pABA=="0%",variable=="Qus") |>
+  select(time,med) -> tmp
+day0time0 <- tmp$time[min(which(cumprod(tmp$med)<=0.5))]
+
+group_traj |> filter(time>=7,pABA=="0%",variable=="Qus") |>
+  select(time,med) -> tmp2
+day7time0 <- tmp2$time[min(which(cumprod(tmp2$med)<=0.5))]-7
+
+group_traj |> filter(time>=10,pABA=="0%",variable=="Qus") |>
+  select(time,med) -> tmp3
+day10time0 <- tmp3$time[min(which(cumprod(tmp3$med)<=0.5))]-10
+
+group_traj |> filter(time>=15,pABA=="0%",variable=="Qus") |>
+  select(time,med) -> tmp4
+day15time0 <- tmp4$time[min(which(cumprod(tmp4$med)<=0.5))]-15
+
+#pABA 0.0005%
+group_traj |> filter(pABA=="0.0005%",variable=="Qus") |>
+  select(time,med) -> tmp
+day0time0.0005 <- tmp$time[min(which(cumprod(tmp$med)<=0.5))]
+
+group_traj |> filter(time>=7,pABA=="0.0005%",variable=="Qus") |>
+  select(time,med) -> tmp2
+day7time0.0005 <- tmp2$time[min(which(cumprod(tmp2$med)<=0.5))]-7
+
+group_traj |> filter(time>=10,pABA=="0.0005%",variable=="Qus") |>
+  select(time,med) -> tmp3
+day10time0.0005 <- tmp3$time[min(which(cumprod(tmp3$med)<=0.5))]-10
+
+group_traj |> filter(time>=15,pABA=="0.0005%",variable=="Qus") |>
+  select(time,med) -> tmp4
+day15time0.0005 <- tmp4$time[min(which(cumprod(tmp4$med)<=0.5))]-15
+
+#pABA 0.005%
+group_traj |> filter(pABA=="0.005%",variable=="Qus") |>
+  select(time,med) -> tmp
+day0time0.005 <- tmp$time[min(which(cumprod(tmp$med)<=0.5))]
+
+group_traj |> filter(time>=7,pABA=="0.005%",variable=="Qus") |>
+  select(time,med) -> tmp2
+day7time0.005 <- tmp2$time[min(which(cumprod(tmp2$med)<=0.5))]-7
+
+group_traj |> filter(time>=10,pABA=="0.005%",variable=="Qus") |>
+  select(time,med) -> tmp3
+day10time0.005 <- tmp3$time[min(which(cumprod(tmp3$med)<=0.5))]-10
+
+group_traj |> filter(time>=15,pABA=="0.005%",variable=="Qus") |>
+  select(time,med) -> tmp4
+day15time0.005 <- tmp4$time[min(which(cumprod(tmp4$med)<=0.5))]-15
+
+#pABA 0.05%
+group_traj |> filter(pABA=="0.05%",variable=="Qus") |>
+  select(time,med) -> tmp
+day0time0.05 <- tmp$time[min(which(cumprod(tmp$med)<=0.5))]
+
+group_traj |> filter(time>=7,pABA=="0.05%",variable=="Qus") |>
+  select(time,med) -> tmp2
+day7time0.05 <- tmp2$time[min(which(cumprod(tmp2$med)<=0.5))]-7
+
+group_traj |> filter(time>=10,pABA=="0.05%",variable=="Qus") |>
+  select(time,med) -> tmp3
+day10time0.05 <- tmp3$time[min(which(cumprod(tmp3$med)<=0.5))]-10
+
+group_traj |> filter(time>=15,pABA=="0.05%",variable=="Qus") |>
+  select(time,med) -> tmp4
+day15time0.05 <- tmp4$time[min(which(cumprod(tmp4$med)<=0.5))]-15
+
+ggplot()+
+  geom_line(
+    aes(
+      x=c(0,7,10,15),
+      y=c(day0timeUninf,day7timeUninf,day10timeUninf,day15timeUninf)
+        ),
+    col=cbPalette[1]
+    )+
+  geom_line(
+    aes(
+      x=c(0,7,10,15),
+      y=c(day0time0,day7time0,day10time0,day15time0)
+    ),
+    col=cbPalette[2]
+  )+
+  geom_line(
+    aes(
+      x=c(0,7,10,15),
+      y=c(day0time0.0005,day7time0.0005,day10time0.0005,day15time0.0005)
+    ),
+    col=cbPalette[3]
+  )+
+  geom_line(
+    aes(
+      x=c(0,7,10,15),
+      y=c(day0time0.005,day7time0.005,day10time0.005,day15time0.005)
+    ),
+    col=cbPalette[4]
+  )+
+  geom_line(
+    aes(
+      x=c(0,7,10,15),
+      y=c(day0time0.05,day7time0.05,day10time0.05,day15time0.05)
+    ),
+    col=cbPalette[5]
+  )+
+  xlab("Day post-infection")+ylab("Median lifespan of new RBC (days)")+
+  theme_bw()+
+  theme(strip.background=element_blank(),
+        legend.position="right",
+        axis.title=element_text(size=15),
+        axis.text=element_text(size=13),
+        legend.text=element_text(size=14)
+  )
+
+
+
+
 ###################################
 #### Uninfected versus pABA 0% ####
 ###################################
@@ -165,6 +302,26 @@ group_pABA<-group_traj |>
                                   "Qus"~"Qus"))
 
 group_pABA |>
+  filter(variable%in%c("N")) |>
+  ggplot()+
+  geom_line(aes(x=time,y=med,col=pABA))+
+  geom_ribbon(aes(x=time,ymin=lo,ymax=hi,fill=pABA),alpha=0.2)+
+  scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x), 
+                labels=trans_format('log10',math_format(10^.x)))+ 
+  scale_colour_manual(values=cbPalette,name=NULL)+
+  scale_fill_manual(values=cbPalette,name=NULL)+
+  xlab("Day post-infection")+ylab("Density per microlitre")+
+  theme_bw()+
+  facet_grid(variable_name~.,scales="free_y")+
+  theme(strip.background=element_blank(),
+        panel.grid = element_blank(),
+        legend.position="right",
+        axis.title=element_text(size=15),
+        axis.text=element_text(size=13),
+        legend.text=element_text(size=14)
+  )
+
+group_pABA |>
   filter(variable%in%c("E","R")) |>
   select(-lo,-hi,-variable_name) |>
   pivot_wider(names_from="variable",values_from="med") |>
@@ -188,7 +345,7 @@ group_pABA |>
   pivot_wider(names_from="variable",values_from="med") |>
   ggplot()+
   geom_path(aes(x=E,y=N,col=pABA),arrow=arrow(type="closed"))+
-  facet_wrap(pABA~.,scales="free")+
+  #facet_wrap(pABA~.,scales="free")+
   scale_colour_manual(values=cbPalette,name=NULL)+
   xlab("Erythrocytes")+ylab("Indiscriminate killing")+
   theme_bw()+
