@@ -193,6 +193,7 @@ sm1 |>
     lambda_u_wn_ratio=lambda_u/(lambda_w+lambda_n),
     loss=(R+E)*(1-Qus),
     rbc=E+R,
+    Nq=rbc*Qun,
     varN=N/rbc,
     perRetic=R/rbc,
     lik=exp(loglik-max(loglik))
