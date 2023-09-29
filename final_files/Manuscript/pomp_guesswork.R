@@ -1,37 +1,29 @@
 #Load required packages
 library(tidyverse)
 library(stringi)
-library(doParallel)
+library(doFuture)
+library(iterators)
 library(pomp)
 library(panelPomp)
-library(ggpubr)
-library(scales)
-library(gridExtra)
-library(strucchange)
-library(fUnitRoots)
-library(forecast)
-library(foreach)
-library(iterators)
-library(doRNG)
-#Set working directory
-setwd("~/Documents/GitHub/bdd/nw11_hier/final_files/Manuscript/")
+
+plan(multisession,workers=50)
 
 read_csv("data.csv",
          col_types="iiinnnn"
-) %>%
+) |>
   mutate(
     mouseid=sprintf("%02d-%02d",box,mouse),
     box=sprintf("%02d",box),
     mouse=sprintf("%02d",mouse),
     paba=as.factor(box),
     rbc_density=rbc_density/1000
-  ) %>%
+  ) |>
   mutate(
     paba=recode(
       paba,
       "01"="0.05","02"="0.005","03"="0.0005","04"="0","05"="control"
     )
-  ) %>%
+  ) |>
   select(
     day,
     Pd=ama_density,
@@ -40,55 +32,50 @@ read_csv("data.csv",
     CD71=cd71_density,
     mouseid,
     paba,box,mouse
-  ) %>%
-  arrange(mouseid,day) %>%
+  ) |>
+  arrange(mouseid,day) |>
   mutate(
     paba=as.character(paba),
     Ter119=ifelse(Ter119==0,NA,Ter119),
     CD71=ifelse(CD71==0,NA,CD71)
-  ) %>%
+  ) |>
   mutate(
     Eryth=(1-CD71/Ter119)*RBC,
     Retic=CD71/Ter119*RBC
   ) -> flow
 
-flow %>%
-  filter(day<=4) %>%
-  lm(log(Pd)~box:day+mouseid-1,data=.) -> fit2
+flow |>
+  filter(day<=4) |>
+  lm(log(Pd)~box:day+mouseid-1,data=_) -> fit2
 
-coef(fit2) %>% 
-  bind_rows() %>%
-  gather(var,val) %>%
+coef(fit2) |> 
+  bind_rows() |>
+  gather(var,val) |>
   mutate(
     var=stri_replace_all_regex(var,"mouseid(\\d{2})-(\\d{2})","dose[$1-$2]"),
     var=stri_replace_all_regex(var,"box(\\d{2}):day","Beta[$1]"),
     val=exp(val)
   ) -> theta1
 
-expand.grid(
+expand_grid(
   box=sprintf("%02d",1:5),
   mouse=sprintf("%02d",1:3)
-) %>%
+) |>
   mutate(
     mouseid=paste0(box,"-",mouse),
     betavar=sprintf("Beta[%s]",box),
     dosevar=sprintf("dose[%s]",mouseid)
-  ) %>%
-  left_join(theta1,by=c("betavar"="var")) %>%
-  dplyr::rename(Beta=val) %>%
-  left_join(theta1,by=c("dosevar"="var")) %>%
-  dplyr::rename(dose=val) %>%
-  select(-betavar,-dosevar) %>%
-  arrange(box,mouse) %>%
+  ) |>
+  left_join(theta1,by=c("betavar"="var")) |>
+  dplyr::rename(Beta=val) |>
+  left_join(theta1,by=c("dosevar"="var")) |>
+  dplyr::rename(dose=val) |>
+  select(-betavar,-dosevar) |>
+  arrange(box,mouse) |>
   mutate(
     Beta=coalesce(Beta,0),
     dose=coalesce(dose,0)
-  ) -> theta
-
-library(doParallel)
-registerDoParallel()
-
-theta %>%
+  ) |>
   mutate(
     sigmaPd = 2, 
     sigmaRBC = 0.1, 
@@ -102,14 +89,16 @@ theta %>%
     N_0 = 8e5
   ) -> theta
 
-foreach (m = iter(theta,"row"),.inorder=TRUE,.combine=c) %dopar% {
-  
-  flow %>%
-    filter(mouseid==m$mouseid) %>%
-    select(day,Pd,RBC,Retic) %>%
-    mutate(Retic=if_else(day %in% c(0,14),NA_real_,Retic)) %>%
+foreach (
+  m = iter(theta,"row"),.inorder=TRUE,.combine=c,
+  .options.future = list(seed = TRUE)
+) %dofuture% {
+  flow |>
+    filter(mouseid==m$mouseid) |>
+    select(day,Pd,RBC,Retic) |>
+    mutate(Retic=if_else(day %in% c(0,14),NA_real_,Retic)) |>
     pomp(
-      params=select(m,-mouseid,-box,-mouse) %>% unlist(),
+      params=select(m,-mouseid,-box,-mouse) |> unlist(),
       times="day",
       t0=0,
       rmeasure=Csnippet("
@@ -154,42 +143,45 @@ foreach (m = iter(theta,"row"),.inorder=TRUE,.combine=c) %dopar% {
         "E_0","R_0","W_0","N_0"
       )
     )
-} %>% 
+} |> 
   set_names(theta$mouseid) -> pos
 
-pf4 <- readRDS("m5pf4.rds")
-pf4 %>%
-  select(loglik,starts_with("sigma"),ends_with("_0")) %>%
+## Just box 4 (for now):
+pos[grepl("04",names(pos))] -> pos
+
+readRDS("m5pf4.rds") |>
+  select(loglik,starts_with("sigma"),ends_with("_0")) |>
   filter(loglik==max(loglik)) -> mle
 
 bake(file="m5sm1_200.rds",{
   
-  registerDoRNG(1510516029)
-  
-  foreach (i=1:200, 
-           .inorder=FALSE,.combine=bind_rows,
-           .packages=c("panelPomp","magrittr","reshape2","plyr","tibble","tidyr","dplyr")
-  ) %dopar% 
-    {
-      
-      mle %>% select(-loglik) %>% unlist() -> p
-      panelPomp(pos,shared=p) -> m
-      
-      m %>%
-        pfilter(Np=5e5,filter.traj=TRUE) %>%
-        as("list") -> pfs
-      
-      pfs %>%
-        plyr::llply(filter_traj) %>%
-        melt() %>%
-        dplyr::rename(mouseid=L1) %>%
-        mutate(rep=i) %>%
-        left_join(
-          data.frame(mouseid=names(pfs),loglik=sapply(pfs,logLik)),
-          by="mouseid"
-        )
-      
-    } -> res
+  foreach (
+    i=1:200, 
+    .inorder=FALSE,.combine=bind_rows,
+    .options.future=list(seed=1513516029)
+  ) %dofuture% {
+    
+    mle |> select(-loglik) |> unlist() -> p
+    panelPomp(pos,shared=p) -> m
+    
+    m |>
+      as("list") |>
+      lapply(pfilter,Np=5e5,filter.traj=TRUE) -> pfs
+    
+    pfs|>
+      lapply(filter_traj) |>
+      melt() |>
+      rename(mouseid=.L1) |>
+      mutate(rep=i) |>
+      left_join(
+        data.frame(
+          mouseid=names(pfs),
+          loglik=sapply(pfs,logLik)
+        ),
+        by="mouseid"
+      )
+    
+  } -> res
   attr(res,"ncpu") <- getDoParWorkers()
   res
   
@@ -198,16 +190,22 @@ bake(file="m5sm1_200.rds",{
 sm1 |>
   as_tibble() |>
   filter(time<=21,mouseid!="01-02",mouseid!="02-03") |> #remove underdosed mice
-  pivot_wider(names_from=variable,values_from=value) |>
+  pivot_wider() |>
   separate_wider_delim(cols="mouseid",delim="-",names=c("box","mouse"),cols_remove=FALSE) |>
   group_by(mouseid) |>
   mutate(
     lik=exp(loglik-max(loglik))
   ) |>
   ungroup() |>
-  select(box,rep,mouse,loglik,lik) |> distinct() -> sm1_lik
+  select(box,rep,mouse,loglik,lik) |> 
+  distinct() -> sm1_lik
 
-sm1_lik |> filter(box=="04") |>
+sm1_lik |>
+  filter(box=="04") |>
   ggplot()+
   geom_histogram(aes(x=log(lik)))+
   facet_grid(.~mouse)
+
+sm1_lik |>
+  group_by(mouse) |>
+  reframe(lik=logmeanexp(log(lik),se=TRUE,ess=TRUE))
