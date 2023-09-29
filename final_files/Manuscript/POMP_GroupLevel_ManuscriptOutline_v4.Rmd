@@ -90,30 +90,6 @@ group_traj |>
     axis.title=element_text(size=15),
     axis.text=element_text(size=13),
     legend.text=element_text(size=14))
-
-group_traj |>
-  filter(pABA=="Uninfected",variable%in%c("Qun")) |>
-  filter(time<=20) |>
-  ggplot()+
-  geom_line(aes(x=time,y=med),linewidth=2,col=cbPalette[1])+
-  geom_ribbon(aes(x=time,ymin=lo,ymax=hi),alpha=0.2,fill=cbPalette[1])+
-  geom_hline(yintercept=(1-exp(-1/40)))+
-  xlab("Day post-infection")+
-  ylab("Probability uRBC removed")+
-  theme_bw()+
-  theme(
-    strip.background=element_blank(),
-    panel.grid = element_blank(),
-    legend.position=c(0.2,0.8),
-    axis.title=element_text(size=15),
-    axis.text=element_text(size=13),
-    legend.text=element_text(size=14))
-
-#group_traj |>
-  #filter(pABA=="0%",variable%in%c("M")) |>
-  #filter(time<=20) |>
-  #select(-lo,-hi,-pABA,-box) |>
-  #mutate(prob=(1/40)/((1/40)+(0.000004*med))*(1-exp(-(1/40)-(0.000004*med))))
 ```
 ### Figure 2
 
@@ -145,7 +121,7 @@ group_traj |>
 
 ```
 
-Use BEAST package to detect change points in reticulocyte and indiscriminate killing time series forpABA = 0% (infected) treatment.
+Use BEAST package to detect change points in reticulocyte and indiscriminate killing time series for pABA = 0% (infected) treatment.
 ```{r phases, include=FALSE}
 df0<-group_traj |>
   filter(pABA=="0%",variable%in%c("R","N","Nq"),time<=21) |>
