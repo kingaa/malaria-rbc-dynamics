@@ -6,17 +6,12 @@ library(panelPomp)
 library(foreach)
 library(iterators)
 library(doRNG)
+
+cbPalette <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
 setwd("~/Documents/GitHub/bdd/nw11_hier/final_files/Manuscript/")
 
 source("POMP_GroupLevel_DataPrep.R")
-
-#Prepare dataframe for plotting group level R vs. lag E for pABA 0%
-group_traj |>
-  filter(pABA=="0%",variable%in%c("E","R")) |>
-  select(-lo,-hi,-pABA,-box) |>
-  pivot_wider(names_from="variable",values_from="med") |>
-  mutate(lagE=lag(E)) |>
-  filter(time<=20) -> med_pABA0
 
 #Load in PNAS trajectories
 sm1name <- "m5sm1.rds"
@@ -37,33 +32,36 @@ sm1 |>
   select(rep,mouse,time,E,R,lik) |>
   unite("key",rep:mouse,sep="_",remove=FALSE) -> sm1_mod
 
-sm1_mod |> select(rep,mouse,lik) |> distinct() -> tmp
-
-tmp |>
-  ggplot()+
-  geom_histogram(aes(x=log(lik)))+
-  facet_grid(.~mouse)
-
 #Create df of key and likelihoods to sample
-sm1_mod |> select(key,lik) |> unique() -> sample_df
-nrow(sample_df) #should be nrow = 6000
+sm1_mod |> filter(mouse=="01") |> select(key,lik) |> unique() -> sample_mouse01
+sm1_mod |> filter(mouse=="02") |> select(key,lik) |> unique() -> sample_mouse02
+sm1_mod |> filter(mouse=="03") |> select(key,lik) |> unique() -> sample_mouse03
+nrow(sample_mouse01) #should be nrow = 2000
 
 #Create list of keys based on likelihoods
-sample_list <- sample(sample_df$key,size=2000,replace=TRUE,prob=sample_df$lik)
-length(sample_list) #should be length 2000
+sample_list01 <- sample(sample_mouse01$key,size=1000,replace=TRUE,prob=sample_mouse01$lik)
+sample_list02 <- sample(sample_mouse02$key,size=1000,replace=TRUE,prob=sample_mouse02$lik)
+sample_list03 <- sample(sample_mouse03$key,size=1000,replace=TRUE,prob=sample_mouse03$lik)
+length(sample_list01) #should be length 1000
 
 #Tabulate how often a key shows up in sample_list
-sample_table <- sample_list |> table() |> as.data.frame() 
-sum(sample_table$Freq) #total of frequency column should be 2000
+sample_table01 <- sample_list01 |> table() |> as.data.frame() 
+sample_table02 <- sample_list02 |> table() |> as.data.frame() 
+sample_table03 <- sample_list03 |> table() |> as.data.frame() 
+names(sample_table01) <- c("sample_list","Freq")
+names(sample_table02) <- c("sample_list","Freq")
+names(sample_table03) <- c("sample_list","Freq")
+
+sum(sample_table01$Freq) #total of frequency column should be 1000
+
+#Join together sample_tables
+sample_table <- bind_rows(sample_table01,sample_table02,sample_table03)
 
 #Create empty data frame to store output
 pred<-data.frame()
 
 #Create list of potential breakpoint days
 breakpoint_list <- c(8,9,10,11,12,13,14)
-
-#Rep counter
-rep_count<-0
 
 for (i in 1:nrow(sample_table)){
   
@@ -89,10 +87,20 @@ for (i in 1:nrow(sample_table)){
     #Run quadratic regression
     lm1<-lm(R~poly(lagE,2),data=df1)
     lm2<-lm(R~poly(lagE,2),data=df2)
+    #Run linear regression for the second df
+    lm3<-lm(R~lagE,data=df2)
+    
+    #Compare lm2 and lm3 using ANOVA
+    anov<-anova(lm3,lm2)
     
     #Calculate log likelihood for each regression
     ll1<-stats::logLik(lm1)
-    ll2<-stats::logLik(lm2)
+    if(anov$`Pr(>F)`[2]<0.05){
+      ll2<-stats::logLik(lm2)
+    } else
+    {
+      ll2<-stats::logLik(lm3)
+    }
     
     #Sum the log likelihoods of both regressions
     llsum<-ll1+ll2
@@ -112,10 +120,20 @@ for (i in 1:nrow(sample_table)){
   #Run quadratic regression
   lm1<-lm(R~poly(lagE,2),data=df1)
   lm2<-lm(R~poly(lagE,2),data=df2)
+  #Run linear regression for the second df
+  lm3<-lm(R~lagE,data=df2)
+  
+  #Compare lm2 and lm3 using ANOVA
+  anov<-anova(lm3,lm2)
   
   #Calculate the predicted values for R given the two regressions
   pred1<-predict(lm1) |> as.data.frame()
-  pred2<-predict(lm2) |> as.data.frame()
+  if(anov$`Pr(>F)`[2]<0.05){
+    pred2<-predict(lm2) |> as.data.frame()
+  } else
+  {
+    pred2<-predict(lm3) |> as.data.frame()
+  }
   
   #Create lagE column in predicted R dfs
   pred1$lagE<-df1$lagE
@@ -148,19 +166,40 @@ for (i in 1:nrow(sample_table)){
 
 pred<-unite(pred,"group_ID",i:rep,sep="_",remove=FALSE)
 
-pred |> select(i) |> unique() |> nrow() #should equal nrow(sample_table)
-pred |> select(i,rep) |> unique() |> nrow() #should equal number of sampled keys (default 2000)
+stopifnot(pred |> select(i) |> unique() |> nrow()==nrow(sample_table)) #should equal nrow(sample_table)
+stopifnot(pred |> select(i,rep) |> unique() |> nrow()==3000) #should equal number of sampled keys (default 3000)
 
 pred |> select(i,bp,rep) |> unique() |>
   ggplot()+
   geom_bar(aes(x=bp))
 
-table(unique(select(pred,i,bp,rep))$bp)/2000
+table(unique(select(pred,i,bp,rep))$bp)/3000
 
 ggplot()+
-  geom_line(data=filter(pred,lm==1),aes(x=lagE,y=predR,group=group_ID,col=factor(mouse)),alpha=0.05)+
-  geom_line(data=filter(pred,lm==2),aes(x=lagE,y=predR,group=group_ID,col=factor(mouse)),alpha=0.05)+
-  geom_path(data=med_pABA0,aes(x=lagE,y=R))+
+  geom_line(data=filter(pred,lm==1),aes(x=lagE,y=predR,group=group_ID,col=factor(mouse)),alpha=0.01)+
+  geom_line(data=filter(pred,lm==2),aes(x=lagE,y=predR,group=group_ID,col=factor(mouse)),alpha=0.01)+
+  #geom_path(data=med_pABA0,aes(x=lagE,y=R))+
+  #geom_text(data=med_pABA0,aes(x=lagE,y=R,label=time),size=5)+
+  theme_bw()+
+  xlab("Erythrocytes (t-1)")+ylab("Reticulcoytes (t)")+
+  theme(
+    strip.background=element_blank(),
+    panel.grid = element_blank(),
+    legend.position="none",
+    axis.title=element_text(size=15),
+    axis.text=element_text(size=13),
+    legend.text=element_text(size=14))
+
+#Prepare dataframe for plotting group level R vs. lag E for pABA 0%
+group_traj |>
+  filter(pABA=="0%",variable%in%c("E","R")) |>
+  select(-lo,-hi,-pABA,-box) |>
+  pivot_wider(names_from="variable",values_from="med") |>
+  mutate(lagE=lag(E)) |>
+  filter(time<=20) -> med_pABA0
+
+ggplot()+
+  geom_path(data=med_pABA0,aes(x=lagE,y=R),col=cbPalette[2],linewidth=2)+
   geom_text(data=med_pABA0,aes(x=lagE,y=R,label=time),size=5)+
   theme_bw()+
   xlab("Erythrocytes (t-1)")+ylab("Reticulcoytes (t)")+
@@ -172,13 +211,17 @@ ggplot()+
     axis.text=element_text(size=13),
     legend.text=element_text(size=14))
 
+#Prepare dataframe for plotting group level Qun vs. time for pABA 0%
+group_traj |>
+  filter(pABA=="0%",variable%in%c("Qun")) |>
+  filter(time<=20) -> Qun_pABA0
+
 ggplot()+
-  geom_path(data=pred,aes(x=lagE,y=predR,group=group_ID,col=factor(mouse)),alpha=0.005)+
-  #geom_path(data=med_pABA0,aes(x=lagE,y=R))+
+  geom_line(data=Qun_pABA0,aes(x=time,y=med),col=cbPalette[2],linewidth=2)+
+  geom_ribbon(data=Qun_pABA0,aes(x=time,ymin=lo,ymax=hi),fill=cbPalette[2],alpha=0.2)+
   #geom_text(data=med_pABA0,aes(x=lagE,y=R,label=time),size=5)+
   theme_bw()+
-  xlab("Erythrocytes (t-1)")+ylab("Reticulcoytes (t)")+
-  facet_wrap(mouse~.)+
+  xlab("Day post-infection")+ylab("Probability uRBC removed\nby indiscriminate killing")+
   theme(
     strip.background=element_blank(),
     panel.grid = element_blank(),
@@ -187,9 +230,21 @@ ggplot()+
     axis.text=element_text(size=13),
     legend.text=element_text(size=14))
 
+#Prepare dataframe for plotting group level R vs. time for pABA 0%
+group_traj |>
+  filter(pABA=="0%",variable%in%c("R")) |>
+  filter(time<=20) -> R_pABA0
+
 ggplot()+
-  geom_line(data=filter(pred,lm==1),aes(x=lagE,y=predR,group=group_ID,col=factor(mouse)),alpha=0.05)+
-  geom_line(data=filter(pred,lm==2),aes(x=lagE,y=predR,group=group_ID,col=factor(mouse)),alpha=0.05)+
+  geom_line(data=R_pABA0,aes(x=time,y=med),col=cbPalette[2],linewidth=2)+
+  geom_ribbon(data=R_pABA0,aes(x=time,ymin=lo,ymax=hi),fill=cbPalette[2],alpha=0.2)+
+  #geom_text(data=med_pABA0,aes(x=lagE,y=R,label=time),size=5)+
   theme_bw()+
-  facet_wrap(mouse~.)+
-  xlab("Erythrocytes (t-1)")+ylab("Reticulcoytes (t)")
+  xlab("Day post-infection")+ylab("Reticulocyte supply (density per microlitre)")+
+  theme(
+    strip.background=element_blank(),
+    panel.grid = element_blank(),
+    legend.position="none",
+    axis.title=element_text(size=15),
+    axis.text=element_text(size=13),
+    legend.text=element_text(size=14))
