@@ -8,6 +8,7 @@ setwd("~/Documents/GitHub/bdd/nw11_hier/final_files/Manuscript/") #sorry Aaron
 sm1name <- "m5sm1.rds"
 sm1 <- readRDS(sm1name)
 
+#Create sm1_mod tibble, with columns rep, mouse, mousid, box, time, E, R, lik and key
 sm1 |>
   as_tibble() |>
   filter(time<=21,mouseid!="01-02",mouseid!="02-03") |> #remove underdosed mice
@@ -22,7 +23,7 @@ sm1 |>
   select(rep,mouse,mouseid,box,time,E,R,lik) |>
   unite("key",c(rep,box,mouse),sep="_",remove=FALSE) -> sm1_mod
 
-#Create df of key and likelihoods to sample
+#Create dataframe with sampled keys from each box and frequency of each key
 joint_key_table<-data.frame()
 mouse_id_list <- unique(sm1_mod$mouseid)
 sample_size <- 1000
@@ -41,7 +42,9 @@ for(id in mouse_id_list){
 #Checkpoint
 stopifnot(sum(joint_key_table$Freq)==length(mouse_id_list)*sample_size)
 
-### Ask Aaron about "baking" this ###
+### Ask Aaron about "baking" data frame below###
+
+#Create data frame with R, lagE, time, mouse and box
 joint_repped_df <- data.frame()
 for (i in 1:nrow(joint_key_table)){
   
@@ -73,8 +76,10 @@ for (i in 1:nrow(joint_key_table)){
     
 } #end of for statement over rows in joint_key_table
 
+#Create column "phase" to be filled in below
 joint_repped_df$phase <- NA
 
+#Create data frame with breakpoints for each of the four pABA boxes
 breakpoint_range <- 8:9
 breakpoint_grid <- expand_grid(breakpoint_range,
                                breakpoint_range,
@@ -82,7 +87,7 @@ breakpoint_grid <- expand_grid(breakpoint_range,
                                breakpoint_range)
 names(breakpoint_grid) <- c("box02","box03","box04","box05")
 
-
+#Create data frame that will store AICs and corresponding breakpoints for each model
 joint_AIC_df <- data.frame()
 for (i in 1:nrow(breakpoint_grid)){
   
