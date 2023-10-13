@@ -215,7 +215,7 @@ anova(model.1,model.2)
 ```{r lifespanCalc}
 #Uninfected
 group_traj |> filter(pABA=="Uninfected",variable=="Qus") |>
-  select(time,med) -> tmp0
+  dplyr::select(time,med) -> tmp0
 group_traj |> filter(time>=1,pABA=="Uninfected",variable=="Qus") |>
   select(time,med) -> tmp1
 group_traj |> filter(time>=2,pABA=="Uninfected",variable=="Qus") |>
