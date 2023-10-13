@@ -62,9 +62,9 @@ expand.grid(
     dosevar=sprintf("dose[%s]",mouseid)
   ) %>%
   left_join(theta1,by=c("betavar"="var")) %>%
-  rename(Beta=val) %>%
+  dplyr::rename(Beta=val) %>%
   left_join(theta1,by=c("dosevar"="var")) %>%
-  rename(dose=val) %>%
+  dplyr::rename(dose=val) %>%
   select(-betavar,-dosevar) %>%
   arrange(box,mouse) %>%
   mutate(
