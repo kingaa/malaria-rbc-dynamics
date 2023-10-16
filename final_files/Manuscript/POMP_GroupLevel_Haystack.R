@@ -1,6 +1,12 @@
 library(tidyverse)
+library(foreach)
+library(iterators)
+library(doFuture)
+plan(multisession)
 
 setwd("~/Documents/GitHub/bdd/nw11_hier/final_files/Manuscript/") #sorry Aaron
+
+cbPalette <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
 
 #### Make data frame with all of the data ####
 
@@ -11,7 +17,7 @@ sm1 <- readRDS(sm1name)
 #Create sm1_mod tibble, with columns rep, mouse, mousid, box, time, E, R, lik and key
 sm1 |>
   as_tibble() |>
-  filter(time<=21,mouseid!="01-02",mouseid!="02-03") |> #remove underdosed mice
+  filter(time<=21,mouseid!="01-01",mouseid!="01-02",mouseid!="02-03") |> #remove underdosed mice
   pivot_wider(names_from=variable,values_from=value) |>
   separate_wider_delim(cols="mouseid",delim="-",names=c("box","mouse"),cols_remove=FALSE) |>
   group_by(mouseid) |>
@@ -19,39 +25,42 @@ sm1 |>
     lik=exp(loglik-max(loglik))
   ) |>
   ungroup() |>
-  filter(box!="01") |> #remove control mice
+  filter(box!="05") |> #remove control mice
   select(rep,mouse,mouseid,box,time,E,R,lik) |>
   unite("key",c(rep,box,mouse),sep="_",remove=FALSE) -> sm1_mod
 
 #Create dataframe with sampled keys from each box and frequency of each key
-joint_key_table<-data.frame()
 mouse_id_list <- unique(sm1_mod$mouseid)
 sample_size <- 1000
-for(id in mouse_id_list){
+foreach (
+  id=mouse_id_list,
+  .combine=rbind,
+  .options.future = list(seed = 851657743)
+) %dofuture% {
   
   key_lik_df <- sm1_mod |> filter(mouseid==id) |> select(key,lik) |> unique()
   
   key_list <- sample(key_lik_df$key,size=sample_size,replace=TRUE,prob=key_lik_df$lik)
   
-  key_table <- key_list |> table() |> as.data.frame() 
+  key_table <- key_list |> table() |> as.data.frame(stringsAsFactors = FALSE) 
   names(key_table) <- c("key","Freq")
   
-  joint_key_table <- bind_rows(joint_key_table,key_table)
+  key_table
   
-}
+} -> joint_key_table
 #Checkpoint
 stopifnot(sum(joint_key_table$Freq)==length(mouse_id_list)*sample_size)
-
-#Create empty data frame to store output
-pred<-data.frame()
 
 #Create list of potential breakpoint days
 breakpoint_list <- c(8,9,10,11,12,13,14)
 
-for (i in 1:nrow(joint_key_table)){
+foreach (
+  i=iter(joint_key_table,"row"),
+  .combine=rbind
+) %dofuture% {
   
   #Assign key from sample_list to s
-  s<-joint_key_table$key[i] |> as.character()
+  s<-i$key |> as.character()
   
   #Filter sm1_sample for assigned key, calculate lagE and omit time = 0 (which is NA for lagE)
   df <- sm1_mod |> 
@@ -130,9 +139,9 @@ for (i in 1:nrow(joint_key_table)){
   
   pred_tmp<-bind_rows(pred1,pred2)
   pred_tmp$mouse<-df$mouse |> unique()
+  pred_tmp$box<-df$box |> unique()
   pred_tmp$key<-s
   pred_tmp$bp<-breakpoint
-  pred_tmp$i<-i
   
   reps<-joint_key_table$Freq[which(joint_key_table$key==s)]
   
@@ -142,6 +151,37 @@ for (i in 1:nrow(joint_key_table)){
     pred_tmp2<-bind_rows(pred_tmp2,pred_tmp) 
   }
   
-  pred<-bind_rows(pred,pred_tmp2)
+  pred_tmp2
   
-} #end of for statement over rows in joint_key_table
+} -> pred
+
+pred$pABA <- factor(pred$box,levels=c("04","03","02","01"),labels=c("0%","0.0005","0.005%","0.05%"))
+
+pred |>
+  ggplot()+
+  geom_path(aes(x=lagE,y=predR,group=i,col=pABA),alpha=0.01)+
+  facet_wrap(pABA~.)+
+  scale_colour_manual(values=cbPalette[2:5])+
+  theme_bw()+
+  xlab("Erythrocytes (t-1)")+ylab("Reticulocyte supply (t)")+
+  theme(
+    strip.background=element_blank(),
+    axis.title=element_text(size=15),
+    strip.text=element_text(size=14),
+    legend.position="none"
+  )
+
+pred |>
+  ggplot()+
+  geom_path(aes(x=lagE,y=predR,group=i,col=pABA),alpha=0.01)+
+  scale_colour_manual(values=cbPalette[2:5])+
+  theme_bw()+
+  xlab("Erythrocytes (t-1)")+ylab("Reticulocyte supply (t)")+
+  theme(
+    strip.background=element_blank(),
+    axis.title=element_text(size=15),
+    strip.text=element_text(size=14),
+    legend.position="none"
+  )
+
+
