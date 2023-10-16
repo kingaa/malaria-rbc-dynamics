@@ -2,9 +2,9 @@ library(tidyverse)
 library(foreach)
 library(iterators)
 library(doFuture)
-plan(multicore)
+plan(multisession)
 
-#setwd("~/Documents/GitHub/bdd/nw11_hier/final_files/Manuscript/") #sorry Aaron
+setwd("~/Documents/GitHub/bdd/nw11_hier/final_files/Manuscript/") #sorry Aaron
 
 #### Make data frame with all of the data ####
 
@@ -23,7 +23,7 @@ sm1 |>
     lik=exp(loglik-max(loglik))
   ) |>
   ungroup() |>
-  filter(box!="01") |> #remove control mice
+  filter(box!="05") |> #remove control mice
   select(rep,mouse,mouseid,box,time,E,R,lik) |>
   unite("key",c(rep,box,mouse),sep="_",remove=FALSE) -> sm1_mod
 
@@ -76,12 +76,12 @@ foreach (
   mutate(box=paste0("box",box)) -> joint_repped_df
 
 #Create data frame with breakpoints for each of the four pABA boxes
-breakpoint_range <- 8:9
+breakpoint_range <- 8:10
 breakpoint_grid <- expand_grid(
+  box01=breakpoint_range,
   box02=breakpoint_range,
   box03=breakpoint_range,
-  box04=breakpoint_range,
-  box05=breakpoint_range
+  box04=breakpoint_range
 )
 
 box_list <- unique(joint_repped_df$box)
@@ -111,9 +111,8 @@ foreach (bp=iter(breakpoint_grid,"row"),
     bind_rows(.id="model")
   
 } -> joint_AIC_df
-#end of for statement over rows in breakpoint_grid
 
-bp <- breakpoint_grid[15,]
+bp <- breakpoint_grid[9,]
 
 joint_repped_df |>
   mutate(
