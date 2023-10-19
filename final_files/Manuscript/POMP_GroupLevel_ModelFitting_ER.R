@@ -54,8 +54,6 @@ foreach (
 #Checkpoint
 stopifnot(sum(joint_key_table$Freq)==length(mouse_id_list)*sample_size)
 
-### Ask Aaron about "baking" data frame below###
-
 #Create data frame with R, lagE, time, mouse and box
 bake(file="jrdf.rds",{
 foreach (
@@ -199,9 +197,9 @@ bake(file="jnd.rds",{
       df_box_phase1 <- df_box |> filter(phase==1)
       df_box_phase2 <- df_box |> filter(phase==2)
       
-      newdata_phase1 <- data.frame(lagE=seq(min(df_box_phase1$lagE), max(df_box_phase1$lagE), 1000))
+      newdata_phase1 <- data.frame(lagE=seq(min(df_box_phase1$lagE), max(df_box_phase1$lagE), 10000))
       newdata_phase1$phase <- 1
-      newdata_phase2 <- data.frame(lagE=seq(min(df_box_phase2$lagE), max(df_box_phase2$lagE), 1000))
+      newdata_phase2 <- data.frame(lagE=seq(min(df_box_phase2$lagE), max(df_box_phase2$lagE), 10000))
       newdata_phase2$phase <- 2
       
       newdata <- rbind(newdata_phase1,newdata_phase2)
@@ -233,7 +231,7 @@ bake(file="jnd.rds",{
     
     joint
   
-}) -> joint_newdata #end of baking
+}) -> joint_newdata #end of baking, ASK ABOUT STORING LARGE FILE ON GITHUB
 
 joint_newdata$pABA <- factor(joint_newdata$box,
                                 levels=c("box04","box03","box02","box01"),
