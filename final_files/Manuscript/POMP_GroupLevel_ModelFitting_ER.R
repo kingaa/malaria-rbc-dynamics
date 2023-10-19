@@ -153,7 +153,7 @@ bake(file="jnd.rds",{
     
     coeftab_box$rowname <- lapply(1:nrow(coeftab_box),FUN=function(r){
       
-      if(grepl("raw",name, fixed=TRUE)){
+      if(grepl("raw",coeftab_box$rowname[r], fixed=TRUE)){
         
         x <- strsplit(coeftab_box$rowname[r],", raw = T")[[1]] |> cat(sep="") |> capture.output()
         y <- strsplit(x,paste0("box",box_choice,":"))[[1]]
