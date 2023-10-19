@@ -5,7 +5,7 @@ library(mgcv)
 library(foreach)
 library(iterators)
 library(doFuture)
-plan(multisession)
+plan(multisession) #for faster results, use multicore outside of RStudio
 
 #### Make data frame with all of the data ####
 
@@ -70,9 +70,11 @@ foreach (
 } |>
   mutate(box=paste0("box",box)) -> joint_repped_df
 
+joint_repped_df$box <- factor(joint_repped_df$box)
+
 #Models
 models <- list(
-  m1=gam(N~s(time*box),data=joint_repped_df), #ASK AARON
+  m1=gam(N~box + s(time, by = box),data=joint_repped_df),
   m2=gam(N~s(time),data=joint_repped_df),
   m3=gam(N~1,data=joint_repped_df)
 )
