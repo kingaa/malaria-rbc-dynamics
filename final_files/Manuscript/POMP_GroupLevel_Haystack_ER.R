@@ -56,6 +56,7 @@ stopifnot(sum(joint_key_table$Freq)==length(mouse_id_list)*sample_size)
 #Create list of potential breakpoint days
 breakpoint_list <- c(8,9,10,11,12,13,14)
 
+bake(file="pred.rds",{
 foreach (
   i=iter(joint_key_table,"row"),
   .combine=rbind
@@ -155,7 +156,7 @@ foreach (
   
   pred_tmp2
   
-} -> pred
+} }) -> pred
 
 pred$pABA <- factor(pred$box,levels=c("04","03","02","01"),labels=c("0%","0.0005%","0.005%","0.05%"))
 pred$phase <- factor(pred$lm,levels=c("1","2"),labels=c("Phase 1","Phase 2"))
