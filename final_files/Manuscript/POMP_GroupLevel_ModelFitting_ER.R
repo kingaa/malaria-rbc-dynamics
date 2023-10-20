@@ -5,7 +5,7 @@ library(pomp)
 library(foreach)
 library(iterators)
 library(doFuture)
-plan(multisession)
+plan(multisession) #for faster results, use multicore outside of RStudio
 
 seed_choice <- 851657743
 set.seed(seed_choice)
@@ -115,13 +115,17 @@ foreach (bp=iter(breakpoint_grid,"row"),
   
 } }) -> joint_AIC_df
 
+
+#Extract breakpoints from best model (lowest AIC)
 bp <- joint_AIC_df[which(joint_AIC_df$AIC==min(joint_AIC_df$AIC)),4:7]
 
+#Obtain dataframe with above breakpoints specified
 joint_repped_df |>
   mutate(
     phase=as.factor(if_else(time<=unlist(bp)[box],1,2))
   ) -> df
 
+#Extract best model based on lowest AIC
 models <- list(
   m1=lm(R~poly(lagE,2,raw=T):(box-1):(phase-1)+(box-1):(phase-1),data=df),
   m2=lm(R~(poly(lagE,2,raw=T)+box-1):(phase-1)+(phase-1),data=df),
@@ -134,6 +138,7 @@ models <- list(
 chosen_model <- models[which(paste0("m",1:6)==joint_AIC_df[which(joint_AIC_df$AIC==min(joint_AIC_df$AIC)),1])]
 chosen_model[[1]]
 
+#Obtain confidence intervals for model parameters (2.5%, 97.5%)
 library(jtools)
 chosen_model_summ <- summ(chosen_model[[1]],confint=TRUE)
 chosen_model_coeftab <- chosen_model_summ$coeftable |> 
@@ -146,11 +151,15 @@ bake(file="jnd.rds",{
   
   for (box_choice in box_list){
    
-    df_box <- df |> filter(box==box_choice) #filter data for chosen box
+    #Filter data for chosen box
+    df_box <- df |> filter(box==box_choice)
+    
+    #Create table with coefficients for chosen box
     coeftab_box <- chosen_model_coeftab |> 
       filter(grepl(box_choice,rowname)) |>
-      select(rowname,`2.5%`,`97.5%`) #create table with coefficients for chosen box
+      select(rowname,`2.5%`,`97.5%`)
     
+    #Rewrite rowname column to match coefficient names from lm
     coeftab_box$rowname <- lapply(1:nrow(coeftab_box),FUN=function(r){
       
       if(grepl("raw",coeftab_box$rowname[r], fixed=TRUE)){
@@ -168,11 +177,12 @@ bake(file="jnd.rds",{
         
       }
       output
-    }) #rewrite rowname column to match coefficient names from lm
+    })
     
     #Create lm object whose coefficients will be manipulated
     m01 <- lm(R~poly(lagE,2):(phase-1)+(phase-1),data=df_box)
     
+    #Run 1000 replicates where the coefficients of m01 will be sampled from CIs
     foreach (r=1:1000,
              .combine=rbind,
              .options.future = list(seed = seed_choice)
@@ -192,11 +202,13 @@ bake(file="jnd.rds",{
         
         m02$coefficients[i] <- samp
         
-      } #end of for statement over i
+      } #end of for statement over i (i.e., sampling for all coefficients)
       
+      #Split data based on phase
       df_box_phase1 <- df_box |> filter(phase==1)
       df_box_phase2 <- df_box |> filter(phase==2)
       
+      #Generate new data to give to predict (requires lagE column and phase column)
       newdata_phase1 <- data.frame(lagE=seq(min(df_box_phase1$lagE), max(df_box_phase1$lagE), 10000))
       newdata_phase1$phase <- 1
       newdata_phase2 <- data.frame(lagE=seq(min(df_box_phase2$lagE), max(df_box_phase2$lagE), 10000))
@@ -205,6 +217,7 @@ bake(file="jnd.rds",{
       newdata <- rbind(newdata_phase1,newdata_phase2)
       newdata$phase <- factor(newdata$phase)
       
+      #Calculate predicted reticulocyte values for both phases using coefficients from m02
       pred1 <- sapply(filter(newdata,phase==1)$lagE,FUN=function(x){
         m02$coefficients[1]+
           m02$coefficients[3]*x+
@@ -217,26 +230,33 @@ bake(file="jnd.rds",{
           m02$coefficients[6]*x^2
       })
       
+      #Add predicted reticulocyte values, rep number and box choice to newdata
       newdata$pred <- c(pred1,pred2)
       newdata$rep <- r
       newdata$box <- box_choice
       
+      #Return newdata for use with rbind
       newdata
       
     } -> box_newdata
     
+    #Join together box_newdata dfs for all boxes
     joint <- rbind(joint,box_newdata)
      
   } #end of for statement over boxes
     
+    #Return join dataframe
     joint
   
-}) -> joint_newdata #end of baking, ASK ABOUT STORING LARGE FILE ON GITHUB
+}) -> joint_newdata #end of baking
 
+#Add pABA as a factor
 joint_newdata$pABA <- factor(joint_newdata$box,
                                 levels=c("box04","box03","box02","box01"),
                                 labels=c("0%","0.0005%","0.005%","0.05%"))
 
+#Create summarised dataframe that calculates the avg, min and max predicted
+#reticulocyte value for a given pABA, lagE and phase
 joint_newdata |>
   group_by(pABA,lagE,phase) |>
   summarise(
@@ -245,7 +265,7 @@ joint_newdata |>
     max=max(pred)
   ) -> joint_group
   
-(pABAphases <- ggplot()+
+(ModelFitting_ER <- ggplot()+
   geom_line(data=filter(joint_group, phase==1),aes(x=lagE,y=avg,col=pABA),linewidth=2)+
   geom_line(data=filter(joint_group, phase==2),aes(x=lagE,y=avg,col=pABA),linewidth=2)+
   geom_ribbon(data=filter(joint_group, phase==1),aes(x=lagE,ymin=min,ymax=max,fill=pABA),alpha=0.2)+
@@ -264,7 +284,7 @@ joint_newdata |>
   )
 )
   
-ggsave("pABAphases.png",plot=pABAphases,
+ggsave("ModelFitting_ER.png",plot=ModelFitting_ER,
        width=20,height=15,units="cm") 
 
 #Careful when doing the prediction, do the lines start where you think they should start and not at zero
