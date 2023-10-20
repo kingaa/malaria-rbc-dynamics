@@ -152,7 +152,7 @@ joint_newdata |>
     max=max(pred)
   ) -> joint_group
 
-ggplot()+
+(ModelFitting_N <- ggplot()+
   geom_line(data=joint_group,aes(x=time,y=avg,col=pABA),linewidth=2)+
   geom_ribbon(data=joint_group,aes(x=time,ymin=min,ymax=max,fill=pABA),alpha=0.2)+
   xlab("Day post-infection")+ylab("Indiscriminate killing (density per microlitre)")+
@@ -167,3 +167,6 @@ ggplot()+
     legend.title=element_text(size=15),
     legend.text=element_text(size=13)
   )
+)
+ggsave("ModelFitting_N.png",plot=ModelFitting_N,
+       width=20,height=15,units="cm") 
