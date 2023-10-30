@@ -97,7 +97,7 @@ se <- sqrt(diag(Vb))
 CI <- sapply(names(beta),FUN=function(name){
   
   i <- which(names(beta) == name)
-  x <- beta[i] + (c(-1,1) * (2 * se[i]))
+  x <- beta[i] + (c(-1,1) * (2.24 * se[i]))
   x
   
 })
@@ -152,10 +152,12 @@ joint_newdata |>
     max=max(pred)
   ) -> joint_group
 
+cbPalette <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
 (ModelFitting_N <- ggplot()+
   geom_line(data=joint_group,aes(x=time,y=avg,col=pABA),linewidth=2)+
   geom_ribbon(data=joint_group,aes(x=time,ymin=min,ymax=max,fill=pABA),alpha=0.2)+
-  xlab("Day post-infection")+ylab("Indiscriminate killing (density per microlitre)")+
+  xlab("Day post-infection")+ylab("RBC clearance (density per µL)")+
   scale_colour_manual(values=cbPalette[2:5])+
   scale_fill_manual(values=cbPalette[2:5])+
   theme_bw()+
