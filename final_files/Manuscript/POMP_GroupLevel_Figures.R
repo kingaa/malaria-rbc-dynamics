@@ -64,6 +64,30 @@ ggsave("reticVStime.png",plot=reticVStime,
 ggsave("nVStime.png",plot=nVStime,
        width=20,height=15,units="cm") 
 
+(nVStime0 <- group_traj |>
+    filter(variable=="N",box=="04",time<20) |>
+    ggplot()+
+    geom_line(aes(x=time,y=med,col=pABA),linewidth=2)+
+    geom_ribbon(aes(x=time,ymin=lo,ymax=hi,fill=pABA),alpha=0.2)+
+    scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x), 
+                  labels=trans_format('log10',math_format(10^.x)))+ 
+    xlab("Day post-infection")+
+    ylab("Indiscriminate killing (density per microlitre)")+
+    scale_colour_manual(values=cbPalette[2:5])+
+    scale_fill_manual(values=cbPalette[2:5])+
+    theme_bw()+
+    theme(
+      axis.title=element_text(size=15),
+      axis.text=element_text(size=13),
+      panel.grid=element_blank(),
+      legend.position="none",
+      legend.title=element_text(size=15),
+      legend.text=element_text(size=13)
+    )
+)
+ggsave("nVStime0.png",plot=nVStime0,
+       width=20,height=15,units="cm")
+
 (pABA0swirl <- group_traj |>
     filter(variable%in%c("E","R"),box!="05") |>
     select(-lo,-hi) |>
@@ -122,7 +146,7 @@ group_traj |>
 Erange <- c(0,1)
 expFun <- function(E){1/(1+exp(-10*(-E+0.5)))}
 
-ggplot()+
+(REassump <- ggplot()+
   geom_line(aes(x=Erange,y=c(0.25,0.25)),col=cbPalette[6],linewidth=2)+
   geom_text(aes(x=Erange[1],y=0.29,label="Constant supply (a)"),col=cbPalette[6],hjust=0)+
   geom_line(aes(x=Erange,y=c(1,0)),col=cbPalette[4],linewidth=2)+
@@ -136,23 +160,33 @@ ggplot()+
         axis.text=element_blank(),
         axis.ticks=element_blank(),
         panel.grid=element_blank())
+)
+ggsave("REassump.png",plot=REassump,
+       width=17,height=15,units="cm")
 
-ggplot()+
+
+
+(Nassump <- ggplot()+
   geom_smooth(aes(x=fig_df$time,y=fig_df$N),se=FALSE,col=cbPalette[2],linewidth=2)+
   geom_text(aes(x=21,y=quantile(fig_df$N,probs=0.85),label="Time-varying killing (b)"),col=cbPalette[2])+
   geom_line(aes(x=c(0,30),y=quantile(fig_df$N,probs=0.25)),col=cbPalette[1],linewidth=2)+
   geom_text(aes(x=15,y=quantile(fig_df$N,probs=0.35),label="Constant killing (a)"),col=cbPalette[1])+
-  geom_path(aes(x=c(0,7,7,23,23,30),y=c(
-    quantile(fig_df$N,probs=0.5),
-    quantile(fig_df$N,probs=0.5),
-    quantile(fig_df$N,probs=0.75),
-    quantile(fig_df$N,probs=0.75),
-    quantile(fig_df$N,probs=0.5),
-    quantile(fig_df$N,probs=0.5)
-                                          )),col=cbPalette[3],linewidth=2)+
+  #geom_path(aes(x=c(0,7,7,23,23,30),y=c(
+    #quantile(fig_df$N,probs=0.5),
+    #quantile(fig_df$N,probs=0.5),
+    #quantile(fig_df$N,probs=0.75),
+    #quantile(fig_df$N,probs=0.75),
+    #quantile(fig_df$N,probs=0.5),
+    #quantile(fig_df$N,probs=0.5)
+     #                                     )),col=cbPalette[3],linewidth=2)+
+  geom_line(aes(x=c(0,30),y=0),col=cbPalette[7],linewidth=2)+
+  geom_text(aes(x=15,y=90000,label="No killing (c)"),col=cbPalette[7])+
   xlab("Day post-infection")+ylab("Indiscriminate killing")+
   theme_bw()+
   theme(axis.title=element_text(size=15),
         axis.text=element_blank(),
         axis.ticks=element_blank(),
         panel.grid=element_blank())
+)
+ggsave("Nassump.png",plot=Nassump,
+       width=17,height=15,units="cm")
