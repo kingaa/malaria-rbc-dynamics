@@ -78,7 +78,7 @@ foreach (
   mutate(box=paste0("box",box)) }) -> joint_repped_df
 
 #Create data frame with breakpoints for each of the four pABA boxes
-breakpoint_range <- 8:10
+breakpoint_range <- 8:11
 breakpoint_grid <- expand_grid(
   box01=breakpoint_range,
   box02=breakpoint_range,
@@ -159,28 +159,11 @@ bake(file="jnd.rds",{
       filter(grepl(box_choice,rowname)) |>
       select(rowname,`2.5%`,`97.5%`)
     
-    #Rewrite rowname column to match coefficient names from lm
-    coeftab_box$rowname <- lapply(1:nrow(coeftab_box),FUN=function(r){
-      
-      if(grepl("raw",coeftab_box$rowname[r], fixed=TRUE)){
-        
-        x <- strsplit(coeftab_box$rowname[r],", raw = T")[[1]] |> cat(sep="") |> capture.output()
-        y <- strsplit(x,paste0("box",box_choice,":"))[[1]]
-        z <- capture.output(cat(y[1:length(y)]))
-        output <- gsub(" phase", "phase", z)
-        
-      } else {
-          
-        x <- strsplit(coeftab_box$rowname[r],paste0("box",box_choice,":"))[[1]]
-        y <- capture.output(cat(x[1:length(x)]))
-        output <- gsub(" phase", "phase", y)
-        
-      }
-      output
-    })
-    
     #Create lm object whose coefficients will be manipulated
     m01 <- lm(R~poly(lagE,2):(phase-1)+(phase-1),data=df_box)
+    
+    #Rewrite rowname column to match coefficient names from lm
+    coeftab_box$rowname <- names(coef(m01))
     
     #Run 1000 replicates where the coefficients of m01 will be sampled from CIs
     foreach (r=1:1000,
@@ -209,6 +192,7 @@ bake(file="jnd.rds",{
       df_box_phase2 <- df_box |> filter(phase==2)
       
       #Generate new data to give to predict (requires lagE column and phase column)
+      #Get full range across all the data and put mark what minimum of 90th percentile of that treatment
       newdata_phase1 <- data.frame(lagE=seq(min(df_box_phase1$lagE), max(df_box_phase1$lagE), 10000))
       newdata_phase1$phase <- 1
       newdata_phase2 <- data.frame(lagE=seq(min(df_box_phase2$lagE), max(df_box_phase2$lagE), 10000))
@@ -218,6 +202,8 @@ bake(file="jnd.rds",{
       newdata$phase <- factor(newdata$phase)
       
       #Calculate predicted reticulocyte values for both phases using coefficients from m02
+      #predict(m02,newdata)
+      
       pred1 <- sapply(filter(newdata,phase==1)$lagE,FUN=function(x){
         m02$coefficients[1]+
           m02$coefficients[3]*x+
@@ -265,6 +251,9 @@ joint_newdata |>
     max=max(pred)
   ) -> joint_group
   
+
+cbPalette <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
 (ModelFitting_ER <- ggplot()+
   geom_line(data=filter(joint_group, phase==1),aes(x=lagE,y=avg,col=pABA),linewidth=2)+
   geom_line(data=filter(joint_group, phase==2),aes(x=lagE,y=avg,col=pABA),linewidth=2)+
@@ -273,12 +262,13 @@ joint_newdata |>
   xlab("Erythrocytes (t-1)")+ylab("Predicted reticulocyte supply (t)")+
   scale_colour_manual(values=cbPalette[2:5])+
   scale_fill_manual(values=cbPalette[2:5])+
+  facet_wrap(pABA~.)+
   theme_bw()+
   theme(
     axis.title=element_text(size=15),
     axis.text=element_text(size=13),
     panel.grid=element_blank(),
-    legend.position=c(0.8,0.7),
+    legend.position="right",#c(0.8,0.7),
     legend.title=element_text(size=15),
     legend.text=element_text(size=13)
   )
