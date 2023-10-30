@@ -157,7 +157,7 @@ chosen_model[[1]]
 
 #Obtain confidence intervals for model parameters (2.5%, 97.5%)
 library(jtools)
-chosen_model_summ <- summ(chosen_model[[1]],confint=TRUE)
+chosen_model_summ <- summ(chosen_model[[1]],confint=getOption("summ-confint", TRUE),ci.width=0.95)
 chosen_model_coeftab <- chosen_model_summ$coeftable |> 
   as.data.frame() |> 
   rownames_to_column()
@@ -210,12 +210,24 @@ bake(file="jnd_null.rds",{
       
       #Generate new data to give to predict (requires lagE column and phase column)
       #Get full range across all the data and put mark what minimum of 90th percentile of that treatment
-      newdata_phase1 <- data.frame(lagE=seq(min(df_box_phase1$lagE), max(df_box_phase1$lagE), 10000))
-      newdata_phase1$phase <- 1
-      newdata_phase2 <- data.frame(lagE=seq(min(df_box_phase2$lagE), max(df_box_phase2$lagE), 10000))
-      newdata_phase2$phase <- 2
       
-      newdata <- rbind(newdata_phase1,newdata_phase2)
+      newdata <- rbind(
+        expand.grid(
+        lagE=seq(wquant(df_box_phase1$lagE,probs=0.1), wquant(df_box_phase1$lagE,probs=0.9), 10000),
+        phase=1
+        ),
+      expand.grid(
+        lagE=seq(wquant(df_box_phase2$lagE,probs=0.1), wquant(df_box_phase2$lagE,probs=0.9), 10000),
+        phase=2
+      )
+      )
+      
+      #newdata_phase1 <- data.frame(lagE=seq(min(df_box_phase1$lagE), max(df_box_phase1$lagE), 10000))
+      #newdata_phase1$phase <- 1
+      #newdata_phase2 <- data.frame(lagE=seq(min(df_box_phase2$lagE), max(df_box_phase2$lagE), 10000))
+      #newdata_phase2$phase <- 2
+      
+      #newdata <- rbind(newdata_phase1,newdata_phase2)
       newdata$phase <- factor(newdata$phase)
       
       #Calculate predicted reticulocyte values for both phases using coefficients from m02
