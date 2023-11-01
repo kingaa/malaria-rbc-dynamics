@@ -1,3 +1,5 @@
+#SET DIRECTORY TO SOURCE FILE LOCATION
+
 library(tidyverse)
 library(pomp)
 library(foreach)
@@ -136,10 +138,10 @@ bake(file="jAICdf_null.rds",{
 joint_AIC_df |>
   filter(AIC==min(AIC)) -> best
 
-##Obtain dataframe with above breakpoints specified
+##Obtain data frame with above breakpoints specified
 joint_repped_df |>
   mutate(
-    phase=as.factor(if_else(time<=unlist(bp)[box],1,2))
+    phase=as.factor(if_else(time<=as.integer(unlist(best)[box]),1,2))
   ) -> df
 
 ##Extract best model based on lowest AIC
@@ -162,6 +164,8 @@ chosen_model_summ <- summ(
   ci.width=0.95
 )
 
+confint(chosen_model)
+
 coeftab <- chosen_model_summ$coeftable
 coefs <- runif_design(
   lower=coeftab[,"2.5%"],
@@ -177,10 +181,67 @@ colnames(predq) <- c("lo","med","hi")
 df |>
   bind_cols(predq) -> df
 
-df |>
+df$pABA <- factor(df$box,
+                             levels=c("box04","box03","box02","box01"),
+                             labels=c("0%","0.0005%","0.005%","0.05%"))
+
+cbPalette <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
+(ModelFitting_ER <- df |> filter(lo>0) |>
   arrange(lagE) |>
-  ggplot(aes(x=lagE,y=med,ymin=lo,ymax=hi,color=box,fill=box,
-    group=interaction(box,phase)))+
+  ggplot(aes(x=lagE,y=med,ymin=lo,ymax=hi,color=pABA,fill=pABA,
+    group=interaction(pABA,phase)))+
   geom_line()+
   geom_ribbon(alpha=0.2,color=NA)+
-  theme_bw()
+  theme_bw()+
+  xlab("Erythrocytes (d-1)")+ylab("Predicted reticulocyte supply (d)")+
+  scale_colour_manual(values=cbPalette[2:5])+
+  scale_fill_manual(values=cbPalette[2:5])+
+  theme(
+    axis.title=element_text(size=15),
+    axis.text=element_text(size=13),
+    panel.grid=element_blank(),
+    legend.position=c(0.8,0.8),
+    legend.title=element_text(size=15),
+    legend.text=element_text(size=13)
+  )
+)
+
+library(stringi)
+library(doParallel)
+library(panelPomp)
+library(ggpubr)
+source("POMP_GroupLevel_DataPrep.R")
+
+(RE_facet <- group_traj |>
+    filter(box!="05",variable%in%c("E","R")) |>
+    select(-lo,-hi) |>
+    pivot_wider(names_from="variable",values_from="med") |>
+    mutate(lagE=lag(E)) |>
+    filter(time>0,time<=20) |>
+    ggplot()+
+    geom_path(aes(x=lagE,y=R,col=pABA),linewidth=2)+
+    geom_text(aes(x=lagE,y=R,label=time),size=5)+
+    scale_colour_manual(values=cbPalette[2:5])+
+    facet_wrap(pABA~.)+
+    xlab("Erythrocytes (d-1)")+ylab("Reticulocyte supply (d)")+
+    theme_bw()+
+    theme(
+      axis.title=element_text(size=15),
+      axis.text=element_text(size=11),
+      panel.grid=element_blank(),
+      legend.position="none",
+      legend.title=element_text(size=15),
+      legend.text=element_text(size=13),
+      strip.text=element_text(size=12),
+      strip.background=element_blank()
+      
+    )
+)
+
+joint <- ggarrange(RE_facet,ModelFitting_ER, nrow = 1, labels = c("A","B"))
+joint
+
+ggsave("facet_modelFitting.png",plot=joint,
+       width=30,height=15,units="cm") 
+
