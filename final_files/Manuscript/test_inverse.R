@@ -45,7 +45,7 @@ breakpoint_grid <- as_tibble(
 rep_num <- 1000
 
 #results_df <- data.frame()
-
+bake(file="results_df_RE.rds",{
 foreach (
   r=1:rep_num,
   .combine=rbind,
@@ -156,8 +156,12 @@ foreach (
   #results_df<-rbind(results_df,df)
   
 } -> results_df #end for statement over r
+  
+  results_df
+  
+}) -> results_df_RE
 
-results_bar <- results_df |> 
+results_bar <- results_df_RE |> 
   select(r,b,model) |> 
   unique() |>
   unite("model_b",c(model,b),sep=", ",remove=FALSE)
@@ -227,12 +231,12 @@ results_bar |>
 
 
 
-results_df$pABA <- factor(results_df$box,
+results_df_RE$pABA <- factor(results_df_RE$box,
                           levels=c("04","03","02","01"),
                           labels=c("0%","0.0005%","0.005%","0.05%"))
 
 
-(best_model_plot <- results_df |>
+(best_model_plot <- results_df_RE |>
   unite("model_b",c(model,b),sep=", ",remove=FALSE) |>
   filter(model_b=="m6, 9") |>
   ggplot()+
@@ -241,7 +245,6 @@ results_df$pABA <- factor(results_df$box,
     annotate("text",x=7500000,y=3250000,label="Phase 2",col=cbPalette[8],size=5)+
   xlab("Erythrocyte density (d-1)")+ylab("Reticulocyte supply (d)")+
   scale_colour_manual(values=cbPalette[c(6,8)])+
-    labs(tag = "A") +
   ggtitle("Model 6, breakpoint 9 (day post-infection)")+
   theme_bw()+
   theme(
@@ -258,7 +261,7 @@ results_df$pABA <- factor(results_df$box,
   )
 )
 
-(second_model_plot <- results_df |>
+(second_model_plot <- results_df_RE |>
     unite("model_b",c(model,b),sep=", ",remove=FALSE) |>
     filter(model_b=="m3, 9") |>
     ggplot()+
@@ -283,7 +286,7 @@ results_df$pABA <- factor(results_df$box,
     )
 )
 
-(third_model_plot <- results_df |>
+(third_model_plot <- results_df_RE |>
     unite("model_b",c(model,b),sep=", ",remove=FALSE) |>
     filter(model_b=="m5, 9") |>
     ggplot()+
