@@ -181,6 +181,8 @@ df$pABA <- factor(df$box,
                   levels=c("box04","box03","box02","box01"),
                   labels=c("0%","0.0005%","0.005%","0.05%"))
 
+cbPalette <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
 (ModelFitting_ER <- df |> filter(lo>0) |>
     arrange(lagE) |>
     ggplot(aes(x=lagE,y=med,ymin=lo,ymax=hi,color=pABA,fill=pABA,
