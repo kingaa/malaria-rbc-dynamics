@@ -6,6 +6,7 @@ library(pomp)
 library(foreach)
 library(iterators)
 library(doFuture)
+library(aakmisc)
 plan(multisession) #for faster results, use multicore outside of RStudio
 
 seed_choice <- 851657743
@@ -30,7 +31,7 @@ sm1 |>
   ) |>
   ungroup() |>
   filter(box!="05") |> #remove control mice
-  select(rep,mouse,mouseid,box,time,Qun,lik) |>
+  select(rep,mouse,mouseid,box,time,Qun,E,lik) |>
   unite("key",c(rep,box,mouse),sep="_",remove=FALSE) -> sm1_mod
 
 #Loop over reps -> need to change to parallel version
@@ -65,7 +66,9 @@ foreach (
   models <- list(
     m1=gam(Qun~s(time, by = box)+box,data=joint_mouse_df),
     m2=gam(Qun~s(time),data=joint_mouse_df),
-    m3=gam(Qun~1,data=joint_mouse_df)
+    m3=gam(Qun~1,data=joint_mouse_df),
+    m4=gam(Qun~E,data=joint_mouse_df),
+    m5=gam(Qun~E:box+box,data=joint_mouse_df)
   )
   
   models |>
@@ -103,7 +106,7 @@ cbPalette <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2",
 
 results_df_Qun$pABA <- factor(results_df_Qun$box,
                           levels=c("04","03","02","01"),
-                          labels=c("0%","0.0005%","0.005%","0.05%"))
+                          labels=c("Unsupplemented","Low","Medium","High"))
 
 table(results_bar$model)/1000
 
@@ -111,7 +114,7 @@ results_bar |>
   ggplot(aes(x=reorder(model, model, function(x)-length(x)),y = (after_stat(count))/sum(after_stat(count))))+
   geom_bar()+
   ylab("Frequency")+
-  scale_x_discrete(labels=c("Model 2","Model 1"))+
+  scale_x_discrete(labels=c("Model B","Model A"))+
   theme_bw()+
   theme(
     axis.title=element_text(size=15),
@@ -126,13 +129,13 @@ results_bar |>
     
   )
 
-(second_model_plot <- results_df_Qun |>
+second_model_plot <- results_df_Qun |>
     filter(model=="m2") |>
     ggplot()+
     geom_line(aes(x=time,y=pred,group=r),alpha=0.01)+
-    xlab("Day post-infection")+ylab("")+
-    ggtitle("Clearance rate ~ time")+
-    ylim(-0.1,0.6)+
+    xlab("")+ylab("")+
+    geom_text(aes(x=15,y=0.975,label="Clearance rate ~ time"),size=4)+
+    scale_y_continuous(lim=c(-0.1,1))+
     theme_bw()+
     theme(
       axis.title=element_text(size=15),
@@ -146,43 +149,43 @@ results_bar |>
       plot.title=element_text(size=14,hjust=0.5)
       
     )
-)
 
-(best_model_plot <- results_df_Qun |>
+best_model_plot <- results_df_Qun |>
     filter(model=="m1") |>
     ggplot()+
     geom_line(aes(x=time,y=pred,group=interaction(r,pABA),col=pABA),alpha=0.075)+
-    xlab("Day post-infection")+ylab("RBC clearance rate")+
+    xlab("")+
     scale_colour_manual(values=cbPalette[2:5])+
     guides(colour = guide_legend(override.aes = list(alpha = 1)))+
-    ggtitle("Clearance rate ~ time x pABA")+
-    ylim(-0.1,0.6)+
+    geom_text(aes(x=13,y=0.975,label="Clearance rate ~ time x pABA"),size=4)+
+    scale_y_continuous(lim=c(-0.1,1))+
+    labs(colour="Parasite nutrient\n(pABA)",y=expression(paste("RBC clearance rate ", (day^{-1}))))+
     theme_bw()+
     theme(
-      axis.title=element_text(size=15),
+      axis.title=element_text(size=13),
       axis.text=element_text(size=11),
       panel.grid=element_blank(),
       legend.position=c(0.2,0.7),
-      legend.title=element_text(size=15),
-      legend.text=element_text(size=13),
+      legend.title=element_text(size=8),
+      legend.text=element_text(size=6),
       strip.text=element_text(size=12),
       strip.background=element_blank(),
       plot.title=element_text(size=14,hjust=0.5,face="bold"),
-      panel.border = element_rect(linewidth=4)
+      panel.border = element_rect(linewidth=4),
+      legend.background = element_blank()
       
     )
-)
 
 (best_model_facet <- results_df_Qun |>
     filter(model=="m1") |>
     ggplot()+
     geom_line(aes(x=time,y=pred,group=interaction(r,pABA),col=pABA),alpha=0.075)+
-    xlab("Day post-infection")+ylab("RBC clearance rate")+
+    xlab("Day post-infection")+ylab("")+
     scale_colour_manual(values=cbPalette[2:5])+
     facet_grid(.~pABA)+
     theme_bw()+
     theme(
-      axis.title=element_text(size=15),
+      axis.title=element_text(size=13),
       strip.text=element_blank(),
       axis.text=element_text(size=11),
       panel.grid=element_blank(),
@@ -208,5 +211,5 @@ gt <- arrangeGrob(best_model_plot,
 p <- as_ggplot(gt) +                                # transform to a ggplot
   draw_plot_label(label = c("A", "B", "C"), size = 15,
                   x = c(0, 0.5, 0), y = c(1, 1, 0.4))
-p
+
 ggsave("Figure5.png",width=22,height=16,units="cm")
