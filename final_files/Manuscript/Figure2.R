@@ -7,17 +7,347 @@ library(pomp)
 library(panelPomp)
 library(ggpubr)
 library(scales)
+library(cowplot)
 
 cbPalette <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
 
 source("POMP_GroupLevel_DataPrep.R")
+
+###########################
+#### A plots ##############
+###########################
+(parasites <- flow |>
+  filter(day<=20,mouseid=="03-01") |>
+  ggplot()+
+  geom_line(aes(x=day,y=Pd,group=mouseid))+
+  geom_point(aes(x=day,y=Pd,group=mouseid),size=3)+
+  scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x), 
+                labels=trans_format('log10',math_format(10^.x)),
+                limits=c(1,10^7.5))+ 
+  theme_bw()+
+  xlab("")+ylab("Parasites\n(density per µL)")+
+  ggtitle("Data (input)")+
+  theme(
+    axis.title.y=element_text(size=11),
+    axis.title.x=element_text(size=13),
+    axis.text=element_text(size=13),
+    plot.title=element_text(hjust=0.5,face="bold",size=13),
+    panel.grid=element_blank(),
+    legend.position=c(0.35,0.3),
+    legend.title=element_text(size=15),
+    legend.text=element_text(size=13),
+    legend.background=element_blank()
+  )
+)
+
+(reticulocytes <- flow |>
+    filter(day<=20,mouseid=="03-01") |>
+    ggplot()+
+    geom_line(aes(x=day,y=Retic,group=mouseid))+
+    geom_point(aes(x=day,y=Retic,group=mouseid),size=3)+
+    scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x), 
+                  labels=trans_format('log10',math_format(10^.x)),
+                  limits=c(10^5,10^7))+  
+    theme_bw()+
+    xlab("")+ylab("RBC supply\n(density per µL)")+
+    #ggtitle("")+
+    theme(
+      axis.title.y=element_text(size=11),
+      axis.title.x=element_text(size=13),
+      axis.text=element_text(size=13),
+      plot.title=element_text(hjust=0.5,face="bold",size=15),
+      panel.grid=element_blank(),
+      legend.position="none",
+      legend.title=element_text(size=15),
+      legend.text=element_text(size=13)
+    )
+)
+
+(erythrocytes <- flow |>
+    filter(day<=20,mouseid=="03-01") |>
+    ggplot()+
+    geom_line(aes(x=day,y=Eryth,group=mouseid))+
+    geom_point(aes(x=day,y=Eryth,group=mouseid),size=3)+
+    scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x), 
+                  labels=trans_format('log10',math_format(10^.x)),
+                  limits=c(10^6,10^7))+  
+    theme_bw()+
+    xlab("Day post-infection")+ylab("Erythrocytes\n(density per µL)")+
+    #ggtitle("")+
+    theme(
+      axis.title.y=element_text(size=11),
+      axis.title.x=element_text(size=13),
+      axis.text=element_text(size=13),
+      plot.title=element_text(hjust=0.5,face="bold",size=15),
+      panel.grid=element_blank(),
+      legend.position="none",
+      legend.title=element_text(size=15),
+      legend.text=element_text(size=13)
+    )
+)
+
+A_column <- ggarrange(parasites,reticulocytes,erythrocytes, nrow = 3, labels = c("A i","  ii","  iii"))
+A_column
+
+###########################
+#### B plots ##############
+###########################
+(K <- sm1 |>
+  filter(variable=="K",time<=20,mouseid=="03-01") |>
+  ggplot()+
+  geom_line(aes(x=time,y=value,group=rep),alpha=0.01)+
+  scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x), 
+                labels=trans_format('log10',math_format(10^.x)),
+                limits=c(1,10^7.5))+ 
+  theme_bw()+
+  xlab("")+ylab("Parasites,\nK (density per µL)")+
+    ggtitle("Smooth trajectories (output)")+
+  theme(
+    axis.title.y=element_text(size=11),
+    axis.title.x=element_text(size=13),
+    axis.text=element_text(size=13),
+    plot.title=element_text(hjust=0.5,face="bold",size=13),
+    panel.grid=element_blank(),
+    legend.position=c(0.35,0.3),
+    legend.title=element_text(size=15),
+    legend.text=element_text(size=13),
+    legend.background=element_blank()
+  )
+)
+
+(R <- sm1 |>
+  filter(variable=="R",time<=20,mouseid=="03-01") |>
+  ggplot()+
+  geom_line(aes(x=time,y=value,group=rep),alpha=0.01)+
+  scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x), 
+                labels=trans_format('log10',math_format(10^.x)),
+                limits=c(10^5,10^7))+  
+  theme_bw()+
+  xlab("")+ylab("RBC supply,\nR (density per µL)")+
+  #ggtitle("")+
+  theme(
+    axis.title.y=element_text(size=11),
+    axis.title.x=element_text(size=13),
+    axis.text=element_text(size=13),
+    plot.title=element_text(hjust=0.5,face="bold",size=15),
+    panel.grid=element_blank(),
+    legend.position="none",
+    legend.title=element_text(size=15),
+    legend.text=element_text(size=13),
+    #panel.border = element_rect(linewidth=4),
+    panel.background = element_rect(fill="rosybrown1")
+  )
+)
+
+(E <-  sm1 |>
+    filter(variable=="E",time<=20,mouseid=="03-01") |>
+    ggplot()+
+    geom_line(aes(x=time,y=value,group=rep),alpha=0.01)+
+    scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x), 
+                  labels=trans_format('log10',math_format(10^.x)),
+                  limits=c(10^6,10^7))+  
+    theme_bw()+
+    xlab("Day post-infection")+ylab("Erythrocytes,\nE (density per µL)")+
+    #ggtitle("")+
+    theme(
+      axis.title.y=element_text(size=11),
+      axis.title.x=element_text(size=13),
+      axis.text=element_text(size=13),
+      plot.title=element_text(hjust=0.5,face="bold",size=15),
+      panel.grid=element_blank(),
+      legend.position="none",
+      legend.title=element_text(size=15),
+      legend.text=element_text(size=13),
+      #panel.border = element_rect(linewidth=4),
+      panel.background = element_rect(fill="rosybrown1")
+    )
+)
+
+(N <- sm1 |>
+    filter(variable=="N",time<=20,mouseid=="03-01") |>
+    ggplot()+
+    geom_point(aes(x=time,y=value,group=rep,fill="Analyzed trajectories",colour="Analyzed trajectories"),shape = 22,size=8)+
+    scale_fill_manual(name='',
+                       breaks=c('Analyzed trajectories'),
+                       values=c('Analyzed trajectories'='rosybrown1'))+
+    scale_colour_manual(name='',
+                      breaks=c('Analyzed trajectories'),
+                      values=c('Analyzed trajectories'='rosybrown1'))+
+    geom_line(aes(x=time,y=value,group=rep),alpha=0.01)+
+    scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x), 
+                  labels=trans_format('log10',math_format(10^.x)),
+                  limits=c(10^5,10^7))+  
+    theme_bw()+
+    xlab("Day post-infection")+ylab("uRBC clearance,\nN (density per µL)")+
+    #ggtitle("")+
+    theme(
+      axis.title.y=element_text(size=11),
+      axis.title.x=element_text(size=13),
+      axis.text=element_text(size=13),
+      plot.title=element_text(hjust=0.5,face="bold",size=15),
+      panel.grid=element_blank(),
+      legend.title=element_text(size=15),
+      legend.text=element_text(size=20),
+      #panel.border = element_rect(linewidth=4),
+      panel.background = element_rect(fill="rosybrown1")
+    )
+)
+legend <- get_legend(N)
+N <- N+theme(legend.position="none")
+
+
+(W <- sm1 |>
+    filter(variable=="W",time<=20,mouseid=="03-01") |>
+    ggplot()+
+    geom_line(aes(x=time,y=value,group=rep),alpha=0.01)+
+    scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x), 
+                  labels=trans_format('log10',math_format(10^.x)),
+                  limits=c(10^5,10^8))+  
+    theme_bw()+
+    xlab("")+ylab("iRBC clearance,\nW (density per µL)")+
+    ggtitle("")+
+    theme(
+      axis.title.y=element_text(size=11),
+      axis.title.x=element_text(size=13),
+      axis.text=element_text(size=13),
+      plot.title=element_text(hjust=0.5,face="bold",size=13),
+      panel.grid=element_blank(),
+      legend.position="none",
+      legend.title=element_text(size=15),
+      legend.text=element_text(size=13)
+    )
+)
+
+B_column <- ggarrange(K,W,R,N,E,legend, nrow = 3, ncol=2, labels = c("B i"," iv"," ii"," v"," iii",""))
+B_column
+
+top_columns <- ggarrange(A_column,B_column,ncol=2,widths=c(0.5,1))
+top_columns
+
+###########################
+#### C plots ##############
+###########################
+sm1_sub <- sm1 |>
+  as_tibble() |>
+  filter(mouseid!="01-02",mouseid!="02-03",time<=20) |> #remove underdosed mice
+  pivot_wider(names_from=variable,values_from=value) |>
+  separate_wider_delim(cols="mouseid",delim="-",names=c("box","mouse"),cols_remove=FALSE) |>
+  filter(box!="05") |>
+  group_by(mouseid) |>
+  mutate(
+    SM=exp(-M/(R+E)),
+    SN=exp(-N/(R+E)),
+    Qun=SM*(1-SN),
+    lik=exp(loglik-max(loglik))
+  ) |>
+  ungroup()
+sm1_sub$pABA <- factor(sm1_sub$box,levels=c("05","04","03","02","01"),
+                       labels=c("Uninfected","Unsupplemented","Low","Medium","High"))
+
+ann_text <- as.data.frame(
+  matrix(
+    c(
+      c("04","03","02","01"),
+      c("n=3","n=3","n=2","n=2")
+    ),
+    nrow=4,ncol=2,byrow=FALSE
+  )
+)
+names(ann_text) <- c("box","lab")
+ann_text$pABA <- factor(ann_text$box,levels=c("05","04","03","02","01"),
+                        labels=c("Uninfected","Unsupplemented","Low","Medium","High"))
+
+num_text <- as.data.frame(
+  matrix(
+    c(
+      c("04","03","02","01"),
+      c("i","ii","iii","iv")
+    ),
+    nrow=4,ncol=2,byrow=FALSE
+  )
+)
+names(num_text) <- c("box","lab")
+num_text$pABA <- factor(num_text$box,levels=c("05","04","03","02","01"),
+                        labels=c("Uninfected","Unsupplemented","Low","Medium","High"))
+
+facet <- sm1_sub |>
+  ggplot()+
+  geom_line(aes(x=time,y=R,group=interaction(rep,mouse),col=pABA,alpha=lik))+
+  geom_text(data=ann_text,aes(x=17,y=10^6.9,label=lab),size=5)+
+  geom_text(data=num_text,aes(x=1,y=10^6.9,label=lab),size=5)+
+  facet_wrap(pABA~.)+
+  scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x), 
+                labels=trans_format('log10',math_format(10^.x)),
+                limits=c(10^5,10^7))+
+  scale_colour_manual(values=cbPalette[2:5])+
+  theme_bw()+
+  ggtitle("Smooth trajectories (input)")+
+  xlab("Day post-infection")+ylab("RBC supply (density per µL)")+
+  theme(
+    axis.title.y=element_text(size=13),
+    axis.title.x=element_text(size=13),
+    axis.text=element_text(size=13),
+    plot.title=element_text(hjust=0.5,face="bold",size=13),
+    panel.grid=element_blank(),
+    legend.position="none",
+    legend.title=element_text(size=15),
+    legend.text=element_text(size=13),
+    strip.background=element_blank(),
+    strip.text=element_text(size=13)
+  )
+facet
+
+group <- group_traj |>
+  filter(time<=20,pABA!="Uninfected",variable=="R") |>
+  ggplot()+
+  geom_line(aes(x=time,y=med,col=pABA),linewidth=2)+
+  geom_ribbon(aes(x=time,ymin=lo,ymax=hi,fill=pABA),alpha=0.2)+
+  geom_text(aes(x=17,y=10^6.9,label="n=10"),size=5)+
+  scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x), 
+                labels=trans_format('log10',math_format(10^.x)),
+                limits=c(10^5,10^7))+
+  scale_colour_manual(values=cbPalette[2:5])+
+  scale_fill_manual(values=cbPalette[2:5])+
+  theme_bw()+
+  ggtitle("Median trajectories (output)")+
+  xlab("Day post-infection")+ylab("RBC supply (density per µL)")+
+  labs(colour="Parasite nutrient (pABA)",fill="Parasite nutrient (pABA)")+
+  theme(
+    axis.title.y=element_text(size=13),
+    axis.title.x=element_text(size=13),
+    axis.text=element_text(size=13),
+    plot.title=element_text(hjust=0.5,face="bold",size=13),
+    panel.grid=element_blank(),
+    legend.position=c(0.7,0.15),
+    legend.title=element_text(size=10),
+    legend.text=element_text(size=8),
+    strip.background=element_blank(),
+    strip.text=element_text(size=13),
+    legend.background=element_blank()
+  )
+
+bottom_row <- ggarrange(facet, group, nrow = 1, labels = c("C","D"))
+bottom_row
+
+###########################
+#### Overall plot #########
+###########################
+overall_plot <- ggarrange(top_columns,bottom_row, nrow=2, heights=c(1,0.65))
+overall_plot
+
+ggsave("Figure2.png",plot=overall_plot,
+       width=30,height=40,units="cm") 
+
+##########################################################################
+#Original figure 2
 
 (parasites <- flow |>
   filter(day<=20,box!="05",mouseid!="01-02",mouseid!="02-03") |>
   ggplot()+
   geom_line(aes(x=day,y=Pd,group=mouseid,col=pABA))+
   scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x), 
-                labels=trans_format('log10',math_format(10^.x)))+ 
+                labels=trans_format('log10',math_format(10^.x)),
+                limits=c(1,10^7.5))+ 
   scale_colour_manual(values=cbPalette[2:5])+
   theme_bw()+
   xlab("")+ylab("Parasites\n(density per µL)")+
@@ -40,14 +370,17 @@ source("POMP_GroupLevel_DataPrep.R")
   ggplot()+
   geom_line(aes(x=day,y=Retic,group=mouseid,col=pABA))+
   scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x), 
-                labels=trans_format('log10',math_format(10^.x)))+ 
+                labels=trans_format('log10',math_format(10^.x)),
+                limits=c(10^5,10^7))+  
   scale_colour_manual(values=cbPalette[2:5])+
   theme_bw()+
   xlab("")+ylab("Reticulocyte supply\n(density per µL)")+
+    #ggtitle("")+
   theme(
     axis.title=element_text(size=15),
     axis.text=element_text(size=13),
     axis.title.x=element_blank(),
+    plot.title=element_text(hjust=0.5,face="bold",size=15),
     panel.grid=element_blank(),
     legend.position="none",
     legend.title=element_text(size=15),
@@ -60,13 +393,16 @@ source("POMP_GroupLevel_DataPrep.R")
     ggplot()+
     geom_line(aes(x=day,y=Eryth,group=mouseid,col=pABA))+
     scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x), 
-                  labels=trans_format('log10',math_format(10^.x)))+ 
+                  labels=trans_format('log10',math_format(10^.x)),
+                  limits=c(10^5,10^7))+  
     scale_colour_manual(values=cbPalette[2:5])+
     theme_bw()+
     xlab("Day post-infection")+ylab("Erythrocytes\n(density per µL)")+
+    #ggtitle("")+
     theme(
       axis.title=element_text(size=15),
       axis.text=element_text(size=13),
+      plot.title=element_text(hjust=0.5,face="bold",size=15),
       panel.grid=element_blank(),
       legend.position="none",
       legend.title=element_text(size=15),
@@ -83,7 +419,8 @@ data_column <- ggarrange(parasites,reticulocytes,erythrocytes, nrow = 3, labels 
   geom_line(aes(x=time,y=med,col=pABA),linewidth=2)+
   geom_ribbon(aes(x=time,ymin=lo,ymax=hi,fill=pABA),alpha=0.2)+
   scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x), 
-              labels=trans_format('log10',math_format(10^.x)))+ 
+              labels=trans_format('log10',math_format(10^.x)),
+              limits=c(1,10^7.5))+ 
   scale_colour_manual(values=cbPalette[2:5])+
   scale_fill_manual(values=cbPalette[2:5])+
   ggtitle("pABA-level model output")+
@@ -92,6 +429,7 @@ data_column <- ggarrange(parasites,reticulocytes,erythrocytes, nrow = 3, labels 
   theme(
     axis.title=element_text(size=15),
     axis.text=element_text(size=13),
+    axis.title.x=element_blank(),
     plot.title=element_text(size=15,face="bold",hjust=0.5),
     panel.grid=element_blank(),
     legend.position="none",
@@ -112,10 +450,12 @@ data_column <- ggarrange(parasites,reticulocytes,erythrocytes, nrow = 3, labels 
     scale_fill_manual(values=cbPalette[2:5])+
     theme_bw()+
     xlab("")+ylab("")+
+    #ggtitle("")+
     theme(
       axis.title=element_text(size=15),
       axis.text=element_text(size=13),
       axis.title.x=element_blank(),
+      plot.title=element_text(hjust=0.5,face="bold",size=15),
       panel.grid=element_blank(),
       legend.position="none",
       legend.title=element_text(size=15),
@@ -130,14 +470,17 @@ data_column <- ggarrange(parasites,reticulocytes,erythrocytes, nrow = 3, labels 
     geom_line(aes(x=time,y=med,col=pABA),linewidth=2)+
     geom_ribbon(aes(x=time,ymin=lo,ymax=hi,fill=pABA),alpha=0.2)+
     scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x), 
-                  labels=trans_format('log10',math_format(10^.x)))+ 
+                  labels=trans_format('log10',math_format(10^.x)),
+                  limits=c(10^5,10^7))+   
     scale_colour_manual(values=cbPalette[2:5])+
     scale_fill_manual(values=cbPalette[2:5])+
     theme_bw()+
     xlab("")+ylab("")+
+    #ggtitle("")+
     theme(
       axis.title=element_text(size=15),
       axis.text=element_text(size=13),
+      plot.title=element_text(hjust=0.5,face="bold",size=15),
       panel.grid=element_blank(),
       axis.title.x=element_blank(),
       legend.position="none",
@@ -153,14 +496,17 @@ data_column <- ggarrange(parasites,reticulocytes,erythrocytes, nrow = 3, labels 
     geom_line(aes(x=time,y=med,col=pABA),linewidth=2)+
     geom_ribbon(aes(x=time,ymin=lo,ymax=hi,fill=pABA),alpha=0.2)+
     scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x), 
-                  labels=trans_format('log10',math_format(10^.x)))+ 
+                  labels=trans_format('log10',math_format(10^.x)),
+                  limits=c(10^5,10^7))+   
     scale_colour_manual(values=cbPalette[2:5])+
     scale_fill_manual(values=cbPalette[2:5])+
     theme_bw()+
     xlab("Day post-infection")+ylab("")+
+    #ggtitle("")+
     theme(
       axis.title=element_text(size=15),
       axis.text=element_text(size=13),
+      plot.title=element_text(hjust=0.5,face="bold",size=15),
       panel.grid=element_blank(),
       legend.position="none",
       legend.title=element_text(size=15),
@@ -168,9 +514,6 @@ data_column <- ggarrange(parasites,reticulocytes,erythrocytes, nrow = 3, labels 
     )
 )
 
-output_column <- ggarrange(K_model,R_model,E_model, nrow = 3, labels = c("D","E","F"))
+output_column <- ggarrange(K_model,R_model,E_model, nrow = 3,heights=c(1,1,1), labels = c("D","E","F"))
 
-joint_columns <- ggarrange(data_column,output_column,ncol=2)  
-
-ggsave("Figure2.png",plot=joint_columns,
-       width=25,height=30,units="cm") 
+joint_columns <- ggarrange(data_column,output_column,ncol=2)
