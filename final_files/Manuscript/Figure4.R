@@ -1,20 +1,26 @@
 #SET DIRECTORY TO SOURCE FILE LOCATION
 
+#Load required packages
 library(tidyverse)
 library(pomp)
 library(foreach)
 library(iterators)
 library(doFuture)
+library(aakmisc)
+
+#Set up for parallelisation 
 plan(multisession) #for faster results, use multicore outside of RStudio
 
+#Set seed (important because random sampling occurs below)
 seed_choice <- 851657743
 set.seed(seed_choice)
 
-##Load in PNAS trajectories
+##Load in smooth distribution samples from PNAS work
 sm1name <- "m5sm1.rds"
 sm1 <- readRDS(sm1name)
 
 ##Create sm1_mod tibble, with columns rep, mouse, mousid, box, time, E, R, lik and key
+##From sm1_mod, we will be sampling individual distribution samples
 sm1 |>
   as_tibble() |>
   filter(time<=20,mouseid!="01-02",mouseid!="02-03") |> #remove underdosed mice
@@ -181,42 +187,48 @@ results_bar |>
 
 results_bar$label <- factor(results_bar$model_b,
                             levels=c("m6, 9","m3, 9","m5, 9","m2, 9","m1, 10","m1, 9","m4, 9","m4, 10","m5, 10","m6, 10"),
-                            labels=c("Model 6,\nbreakpoint 9",
-                                     "Model 3,\nbreakpoint 9",
-                                     "Model 5,\nbreakpoint 9",
-                                     "Model 2,\nbreakpoint 9",
-                                     "Model 1,\nbreakpoint 10",
-                                     "Model 1,\nbreakpoint 9",
-                                     "Model 4,\nbreakpoint 9",
-                                     "Model 4,\nbreakpoint 10",
-                                     "Model 5,\nbreakpoint 10",
-                                     "Model 6,\nbreakpoint 10"))
+                            labels=c("Model F,\nbreakpoint 9",
+                                     "Model C,\nbreakpoint 9",
+                                     "Model E,\nbreakpoint 9",
+                                     "Model B,\nbreakpoint 9",
+                                     "Model A,\nbreakpoint 10",
+                                     "Model A,\nbreakpoint 9",
+                                     "Model D,\nbreakpoint 9",
+                                     "Model D,\nbreakpoint 10",
+                                     "Model E,\nbreakpoint 10",
+                                     "Model F,\nbreakpoint 10"))
 
-xaxis_labs <- c("Model 6,\nbreakpoint 9",
-                "Model 3,\nbreakpoint 9",
-                "Model 5,\nbreakpoint 9",
-                "Model 2,\nbreakpoint 9",
-                "Model 1,\nbreakpoint 10",
-                "Model 1,\nbreakpoint 9",
-                "Model 4,\nbreakpoint 9",
-                "Model 4,\nbreakpoint 10",
-                "Model 5,\nbreakpoint 10",
-                "Model 6,\nbreakpoint 10")
+xaxis_labs <- c("Model F,\nbreakpoint 9",
+                "Model C,\nbreakpoint 9",
+                "Model E,\nbreakpoint 9",
+                "Model B,\nbreakpoint 9",
+                "Model A,\nbreakpoint 10",
+                "Model A,\nbreakpoint 9",
+                "Model D,\nbreakpoint 9",
+                "Model D,\nbreakpoint 10",
+                "Model E,\nbreakpoint 10",
+                "Model F,\nbreakpoint 10")
 
 table(results_bar$model_b)/1000
 
 (bar_plot <- results_bar |>
   ggplot(aes(x=reorder(model_b, model_b, function(x)-length(x)),y = (after_stat(count))/sum(after_stat(count))))+
-  geom_bar(fill=cbPalette[7])+
-  xlab("Model, breakpoint")+ylab("Frequency")+
+  geom_bar()+
+  xlab("Model, breakpoint")+ylab("Frequency model selected")+
   scale_x_discrete(labels=xaxis_labs)+
-  annotate("text",x=5,y=0.55,label="Model 6: R~(lagged E):phase+phase",size=5,hjust=0,fontface=3)+
-  annotate("text",x=5,y=0.45,label="Model 3: R~poly(lagged E,2):phase+phase",size=5,hjust=0,fontface=3)+
-  annotate("text",x=5,y=0.35,label="Model 5: R~(lagged E+pABA):phase+phase",size=5,hjust=0,fontface=3)+
-  annotate("text",x=5,y=0.25,label="Model 2: R~(poly(lagged E,2)+pABA):phase+phase",size=5,hjust=0,fontface=3)+
+  #annotate("text",x=5,y=0.55,label="Model F: R~(lagged E):phase+phase",size=5,hjust=0,fontface=3)+
+    
+  annotate("text",x=5,y=0.55,label=expression(paste("Model F: ",
+                                                    R[t]%~%(E[t-1]):phase+phase)),size=5,hjust=0,parse=T)+ 
+  annotate("text",x=5,y=0.45,label=expression(paste("Model C: ",
+                                                    R[t]%~%(E[t-1]^{2}+E[t-1]):phase+phase)),size=5,hjust=0,parse=T)+ 
+  annotate("text",x=5,y=0.35,label=expression(paste("Model E: ",
+                                                    R[t]%~%(E[t-1]+pABA):phase+phase)),size=5,hjust=0,parse=T)+
+    annotate("text",x=5,y=0.25,label=expression(paste("Model B: ",
+                                                      R[t]%~%(E[t-1]^{2}+E[t-1]+pABA):phase+phase)),size=5,hjust=0,parse=T)+ 
   theme_bw()+
   theme(
-    axis.title=element_text(size=15),
+    axis.title=element_text(size=13),
     axis.text=element_text(size=11),
     axis.text.x=element_text(angle=45,vjust=0.7),
     axis.title.x=element_blank(),
@@ -233,26 +245,27 @@ table(results_bar$model_b)/1000
 
 results_df_RE$pABA <- factor(results_df_RE$box,
                           levels=c("04","03","02","01"),
-                          labels=c("0%","0.0005%","0.005%","0.05%"))
+                          labels=c("Unsupplemented","Low","Medium","High"))
 
 
-(best_model_plot <- results_df_RE |>
+best_model_plot <- results_df_RE |>
   unite("model_b",c(model,b),sep=", ",remove=FALSE) |>
   filter(model_b=="m6, 9") |>
   ggplot()+
   geom_line(aes(x=lagE,y=pred,group=interaction(r,phase),col=phase),alpha=0.01)+
-    scale_x_continuous(labels = function(x) format(x, scientific = TRUE))+
-    scale_y_continuous(labels = function(x) format(x, scientific = TRUE),limits=c(0,4000000))+
-  annotate("text",x=7500000,y=3500000,label="Phase 1",col=cbPalette[6],size=5)+
-    annotate("text",x=7500000,y=3200000,label="Phase 2",col=cbPalette[8],size=5)+
-  xlab("")+ylab("Reticulocyte supply (d)")+
+    scale_x_continuous(labels = aakmisc::scinot)+
+    scale_y_continuous(labels = aakmisc::scinot,limits=c(0,4000000))+
+  annotate("text",x=7500000,y=3200000,label="Phase 1",col=cbPalette[6],size=5)+
+    annotate("text",x=7500000,y=2900000,label="Phase 2",col=cbPalette[8],size=5)+
+  xlab("")+ylab("Reticulocyte supply (t)")+
   scale_colour_manual(values=cbPalette[c(6,8)])+
-  ggtitle("Model 6, breakpoint 9")+
+  geom_text(aes(x=7500000,y=3900000,label="Model F, breakpoint 9"))+
   theme_bw()+
   theme(
-    axis.title=element_text(size=12),
-    axis.text=element_text(size=9),
-    panel.grid=element_blank(),
+    axis.title=element_blank(),
+    axis.text=element_text(size=12),
+    axis.text.x=element_text(colour="white"),
+    panel.grid.minor=element_blank(),
     legend.position="none",
     legend.title=element_text(size=15),
     legend.text=element_text(size=13),
@@ -262,23 +275,23 @@ results_df_RE$pABA <- factor(results_df_RE$box,
     panel.border = element_rect(linewidth=4)
     
   )
-)
 
-(second_model_plot <- results_df_RE |>
+
+second_model_plot <- results_df_RE |>
     unite("model_b",c(model,b),sep=", ",remove=FALSE) |>
     filter(model_b=="m3, 9") |>
     ggplot()+
     geom_line(aes(x=lagE,y=pred,group=interaction(r,phase),col=phase),alpha=0.05)+
     xlab("")+ylab("")+
-    scale_x_continuous(labels = function(x) format(x, scientific = TRUE))+
-    scale_y_continuous(labels = function(x) format(x, scientific = TRUE),limits=c(0,4000000))+
+    scale_x_continuous(labels = aakmisc::scinot)+
+    scale_y_continuous(labels = aakmisc::scinot,limits=c(0,4000000))+
     scale_colour_manual(values=cbPalette[c(6,8)])+
-    ggtitle("Model 3, breakpoint 9")+
+    geom_text(aes(x=7500000,y=3900000,label="Model C, breakpoint 9"))+
     theme_bw()+
     theme(
-      axis.title=element_text(size=12),
-      axis.text=element_text(size=9),
-      panel.grid=element_blank(),
+      axis.title=element_blank(),
+      axis.text=element_text(size=12,colour="white"),
+      panel.grid.minor=element_blank(),
       legend.position="none",
       legend.title=element_text(size=10),
       legend.text=element_text(size=18),
@@ -287,25 +300,25 @@ results_df_RE$pABA <- factor(results_df_RE$box,
       plot.title=element_text(size=14,hjust=0.5)
       
     )
-)
 
-(third_model_plot <- results_df_RE |>
+third_model_plot <- results_df_RE |>
     unite("model_b",c(model,b),sep=", ",remove=FALSE) |>
     filter(model_b=="m5, 9") |>
     ggplot()+
     geom_line(aes(x=lagE,y=pred,group=interaction(r,phase,box),col=pABA),alpha=0.05)+
-    xlab("Erythrocyte density (d-1)")+ylab("Reticulocyte supply (d)")+
-    scale_x_continuous(labels = function(x) format(x, scientific = TRUE))+
-    scale_y_continuous(labels = function(x) format(x, scientific = TRUE),limits=c(0,4000000))+
+    xlab("Erythrocyte density (t-1)")+ylab("Reticulocyte supply (t)")+
+    scale_x_continuous(labels = aakmisc::scinot)+
+    scale_y_continuous(labels = aakmisc::scinot,limits=c(0,4000000))+
     scale_colour_manual(values=cbPalette[c(2:5)])+
     guides(colour = guide_legend(override.aes = list(alpha = 1)))+
-    ggtitle("Model 5, breakpoint 9")+
+    geom_text(aes(x=7500000,y=3900000,label="Model E, breakpoint 9"))+
+    labs(colour="Parasite nutrient (pABA)")+
     theme_bw()+
     theme(
-      axis.title=element_text(size=12),
-      axis.text=element_text(size=9),
-      panel.grid=element_blank(),
-      legend.position=c(0.8,0.65),
+      axis.title=element_blank(),
+      axis.text=element_text(size=12),
+      panel.grid.minor=element_blank(),
+      legend.position="none",
       legend.background=element_blank(),
       legend.title=element_text(size=10),
       legend.text=element_text(size=8),
@@ -314,25 +327,27 @@ results_df_RE$pABA <- factor(results_df_RE$box,
       plot.title=element_text(size=14,hjust=0.5)
       
     )
-)
 
-(fourth_model_plot <- results_df_RE |>
+fourth_model_plot <- results_df_RE |>
     unite("model_b",c(model,b),sep=", ",remove=FALSE) |>
     filter(model_b=="m2, 9") |>
     ggplot()+
     geom_line(aes(x=lagE,y=pred,group=interaction(r,phase,box),col=pABA),alpha=0.07)+
-    xlab("Erythrocyte density (d-1)")+ylab("")+
-    scale_x_continuous(labels = function(x) format(x, scientific = TRUE))+
-    scale_y_continuous(labels = function(x) format(x, scientific = TRUE),limits=c(0,4000000))+
+    xlab("Erythrocyte density (t-1)")+ylab("")+
+    scale_x_continuous(labels = aakmisc::scinot)+
+    scale_y_continuous(labels = aakmisc::scinot,limits=c(0,4000000))+
     scale_colour_manual(values=cbPalette[c(2:5)])+
     guides(colour = guide_legend(override.aes = list(alpha = 1)))+
-    ggtitle("Model 2, breakpoint 9")+
+    geom_text(aes(x=7500000,y=3900000,label="Model B, breakpoint 9"))+
+    labs(colour="Parasite nutrient\n(pABA)")+
     theme_bw()+
     theme(
-      axis.title=element_text(size=12),
-      axis.text=element_text(size=9),
-      panel.grid=element_blank(),
-      legend.position="none",
+      axis.title=element_blank(),
+      axis.text=element_text(size=12),
+      axis.text.y=element_text(colour="white"),
+      panel.grid.minor=element_blank(),
+      legend.position=c(0.825,0.6),
+      legend.background=element_blank(),
       legend.title=element_text(size=10),
       legend.text=element_text(size=8),
       strip.text=element_text(size=12),
@@ -340,20 +355,28 @@ results_df_RE$pABA <- factor(results_df_RE$box,
       plot.title=element_text(size=14,hjust=0.5)
       
     )
-)
 
 library("gridExtra")
 library("cowplot")
 # Arrange plots using arrangeGrob
 # returns a gtable (gt)
-gt <- arrangeGrob(bar_plot, best_model_plot,                               
-                  second_model_plot, third_model_plot, fourth_model_plot,
-                  ncol = 2, nrow = 3, 
-                  layout_matrix = cbind(c(1,2,4), c(1,3,5)))
+
+gt1 <- bar_plot
+gt2 <- arrangeGrob(best_model_plot, second_model_plot, third_model_plot, fourth_model_plot,
+                   ncol = 2, nrow = 2, 
+                   layout_matrix = cbind(c(1,3), c(2,4)),
+                   left="RBC supply (t)",
+                   bottom="Erythrocyte density (t-1)")
+
+
+
+gt <- arrangeGrob(gt1,gt2,
+                  nrow=2,
+                  heights=c(0.66,1))
+
 # Add labels to the arranged plots
 p <- as_ggplot(gt) +                                # transform to a ggplot
   draw_plot_label(label = c("A", "B", "C","D","E"), size = 15,
-                  x = c(0, 0, 0.5,0,0.5), y = c(1, 0.66, 0.66,0.33,0.33))
-p
+                  x = c(0, 0.05,0.55,0.05,0.55), y = c(1, 0.625, 0.625,0.33,0.33))
 
-ggsave("Figure4.png",width=25,height=25,units="cm")
+ggsave("Figure4.png",width=25,height=30,units="cm")
