@@ -36,7 +36,7 @@ read_csv("data.csv",
   ) -> flow
 
 flow$pABA <- factor(flow$box,levels=c("05","04","03","02","01"),
-                    labels=c("Uninfected","0%","0.0005%","0.005%","0.05%"))
+                    labels=c("Uninfected","Unsupplemented","Low","Medium","High"))
 
 
 #Read in PNAS trajectories
@@ -70,7 +70,7 @@ sm1 |>
   pivot_wider() -> group_traj
 
 group_traj$pABA <- factor(group_traj$box,levels=c("05","04","03","02","01"),
-                          labels=c("Uninfected","0%","0.0005%","0.005%","0.05%"))
+                          labels=c("Uninfected","Unsupplemented","Low","Medium","High"))
 
 #Remove estimates for W for control mice
 group_traj <- group_traj |> dplyr::slice(-which(group_traj$box=="05"&group_traj$variable=="W"))
