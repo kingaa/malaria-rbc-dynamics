@@ -40,16 +40,13 @@ flow$pABA <- factor(flow$box,levels=c("05","04","03","02","01"),
 
 
 #Read in PNAS trajectories
-sm1name <- "m5sm1.rds"
+sm1name <- "m5sm1_mod.rds"
 sm1 <- readRDS(sm1name)
 
 #Create dataframe with weighted trajectories (grouped by mouseid first, then by box)
 sm1 |>
   as_tibble() |>
-  filter(mouseid!="01-02",mouseid!="02-03") |> #remove underdosed mice
   pivot_wider(names_from=variable,values_from=value) |>
-  #left_join(bdf,by=c("mouseid")) |>
-  separate_wider_delim(cols="mouseid",delim="-",names=c("box","mouse"),cols_remove=FALSE) |>
   group_by(mouseid) |>
   mutate(
     SM=exp(-M/(R+E)),
@@ -71,6 +68,3 @@ sm1 |>
 
 group_traj$pABA <- factor(group_traj$box,levels=c("05","04","03","02","01"),
                           labels=c("Uninfected","Unsupplemented","Low","Medium","High"))
-
-#Remove estimates for W for control mice
-group_traj <- group_traj |> dplyr::slice(-which(group_traj$box=="05"&group_traj$variable=="W"))
