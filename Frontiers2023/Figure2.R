@@ -224,7 +224,6 @@ sm1_sub <- sm1 |>
   as_tibble() |>
   filter(mouseid!="01-02",mouseid!="02-03",time<=20) |> #remove underdosed mice
   pivot_wider(names_from=variable,values_from=value) |>
-  separate_wider_delim(cols="mouseid",delim="-",names=c("box","mouse"),cols_remove=FALSE) |>
   filter(box!="05") |>
   group_by(mouseid) |>
   mutate(
@@ -237,16 +236,16 @@ sm1_sub <- sm1 |>
 sm1_sub$pABA <- factor(sm1_sub$box,levels=c("05","04","03","02","01"),
                        labels=c("Uninfected","Unsupplemented","Low","Medium","High"))
 
-unsupplemented<-sm1_sub |>
-  filter(pABA=="Unsupplemented") |>
+high<-sm1_sub |>
+  filter(pABA=="High") |>
   ggplot()+
   geom_line(aes(x=time,y=R,group=interaction(rep,mouse),col=lik,alpha=lik))+
-  geom_text(aes(x=17,y=10^6.9,label="n=3"),size=5)+
+  geom_text(aes(x=17,y=10^6.9,label="n=2"),size=5)+
   #geom_text(aes(x=1,y=10^6.9,label="i"),size=5)+
   scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x), 
                 labels=trans_format('log10',math_format(10^.x)),
                 limits=c(10^5,10^7))+
-  scale_colour_gradient(low="lightgoldenrod1",high="orange4")+
+  scale_colour_gradient(low=cbPalette[5],high="orange4")+
   scale_alpha_continuous(guide="none")+
   ggtitle("Smooth trajectories (input)")+
   xlab("Day post-infection")+ylab("RBC supply (density per µL)")+
@@ -266,19 +265,19 @@ unsupplemented<-sm1_sub |>
     strip.text=element_text(size=13)
   )
 
-group <- group_traj |>
-  filter(time<=20,pABA!="Uninfected",variable=="R") |>
+median <- group_traj |>
+  filter(time<=20,pABA=="High",variable=="R") |>
   ggplot()+
   geom_line(aes(x=time,y=med,col=pABA),linewidth=2)+
   geom_ribbon(aes(x=time,ymin=lo,ymax=hi,fill=pABA),alpha=0.2)+
-  geom_text(aes(x=17,y=10^6.9,label="n=10"),size=5)+
+  geom_text(aes(x=17,y=10^6.9,label="n=2"),size=5)+
   scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x), 
                 labels=trans_format('log10',math_format(10^.x)),
                 limits=c(10^5,10^7))+
-  scale_colour_manual(values=cbPalette[2:5])+
-  scale_fill_manual(values=cbPalette[2:5])+
+  scale_colour_manual(values=cbPalette[5])+
+  scale_fill_manual(values=cbPalette[5])+
   theme_bw()+
-  ggtitle("Median trajectories (output)")+
+  ggtitle("Median trajectory (output)")+
   xlab("Day post-infection")+ylab("RBC supply (density per µL)")+
   labs(colour="Parasite nutrient (pABA)",fill="Parasite nutrient (pABA)")+
   theme(
@@ -287,7 +286,7 @@ group <- group_traj |>
     axis.text=element_text(size=13),
     plot.title=element_text(hjust=0.5,face="bold",size=13),
     panel.grid=element_blank(),
-    legend.position=c(0.7,0.15),
+    legend.position="none",
     legend.title=element_text(size=10),
     legend.text=element_text(size=8),
     strip.background=element_blank(),
@@ -295,7 +294,7 @@ group <- group_traj |>
     legend.background=element_blank()
   )
 
-bottom_row <- ggarrange(unsupplemented, group, nrow = 1, labels = c("C","D"))
+bottom_row <- ggarrange(high, median, nrow = 1, labels = c("C","D"))
 
 ###########################
 #### Overall plot #########
