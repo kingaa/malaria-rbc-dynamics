@@ -104,7 +104,7 @@ data_column <- ggarrange(parasites,reticulocytes,erythrocytes, nrow = 3, labels 
                   limits=c(1,10^8))+ 
     scale_colour_manual(values=cbPalette[6:8])+
     scale_fill_manual(values=cbPalette[6:8])+
-    ggtitle("Data-transformation model fits")+
+    ggtitle("Data-transformation scheme fits")+
     theme_bw()+
     xlab("")+ylab("Parasites,\nK (density per µL)")+
     theme(
