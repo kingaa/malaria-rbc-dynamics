@@ -13,7 +13,7 @@ seed_choice <- 851657743
 set.seed(seed_choice)
 
 ##Load in PNAS trajectories
-sm1name <- "m5sm1.rds"
+sm1name <- "m5sm1_mod.rds"
 sm1 <- readRDS(sm1name)
 
 #Create sm1_mod tibble, with columns rep, mouse, mousid, box, time, E, R, lik and key
@@ -21,7 +21,6 @@ sm1 |>
   as_tibble() |>
   filter(time<=20,mouseid!="01-02",mouseid!="02-03") |> #remove underdosed mice
   pivot_wider(names_from=variable,values_from=value) |>
-  separate_wider_delim(cols="mouseid",delim="-",names=c("box","mouse"),cols_remove=FALSE) |>
   group_by(mouseid) |>
   mutate(
     SM=exp(-M/(R+E)),
