@@ -20,60 +20,75 @@ group_traj |>
 Erange <- c(0,1)
 expFun <- function(E){1/(1+exp(-10*(-E+0.5)))}
 
-(REassump <- ggplot()+
-    geom_line(aes(x=Erange,y=c(0.25,0.25)),col=cbPalette[6],linewidth=2)+
-    geom_text(aes(x=Erange[1],y=0.29,label="Constant (1,3,6,7,8,10,11,12)"),col=cbPalette[6],hjust=0)+
-    geom_line(aes(x=Erange,y=c(1,0)),col=cbPalette[4],linewidth=2)+
-    geom_text(aes(x=Erange[1]+0.55,y=0.5,label="Linear (4,5,10,13,15,16)"),col=cbPalette[4],hjust=0)+
-    geom_line(aes(x=seq(0,1,0.01),y=sapply(seq(0,1,0.01),expFun)),linewidth=2,col=cbPalette[5])+
-    geom_text(aes(x=Erange[1]+0.2,y=0.99,label="Hill function (2)"),col=cbPalette[5],hjust=0)+
+(RE_assump <- ggplot()+
+    
+    geom_line(aes(x=Erange,y=c(0.25,0.25)),linetype="solid",linewidth=2)+
+    geom_text(aes(x=Erange[1],y=0.29,label="Constant (1,3,6,7,8,10,11,12)"),hjust=0)+
+    
+    geom_line(aes(x=Erange,y=c(1,0)),linetype="longdash",linewidth=2)+
+    geom_text(aes(x=Erange[1]+0.55,y=0.5,label="Linear (4,5,10,13,15,16)"),hjust=0)+
+    
+    geom_line(aes(x=seq(0,1,0.01),y=sapply(seq(0,1,0.01),expFun)),linewidth=2,linetype="dotted")+
+    geom_text(aes(x=Erange[1]+0.2,y=0.99,label="Hill function (2)"),hjust=0)+
+    
+    scale_x_continuous(labels = c("deficit", "homeostatic\nequilibrium"), breaks = c(0.05, 0.95))+
+    
+    ggtitle("A")+
+    
     ylim(0,1)+
     xlab("Erythrocyte density")+ylab("RBC supply")+
     theme_bw()+
     theme(axis.title=element_text(size=15),
-          axis.text=element_blank(),
+          axis.text.x=element_text(size=12),
+          axis.text.y=element_blank(),
           axis.ticks=element_blank(),
-          panel.grid=element_blank())
+          panel.grid=element_blank(),
+          plot.title=element_text(hjust=0,face="bold"))
 )
 
-(Nassump <- ggplot()+
-    geom_smooth(aes(x=fig_df$time,y=fig_df$N),se=FALSE,col=cbPalette[2],linewidth=2)+
-    geom_text(aes(x=24,y=quantile(fig_df$N,probs=0.85),label="Time-varying (8,9,14,17,18)"),col=cbPalette[2])+
-    geom_line(aes(x=c(0,30),y=quantile(fig_df$N,probs=0.25)),col=cbPalette[6],linewidth=2)+
-    geom_text(aes(x=15,y=quantile(fig_df$N,probs=0.35),label="Constant (2,12)"),col=cbPalette[6])+
+(Qun_assump1 <- ggplot()+
+    geom_line(aes(x=seq(0,1,0.01),y=sapply(seq(0,1,0.01),function(x){dnorm(x,0.5,0.35)-0.4})),linetype="dotdash",linewidth=2)+
+    geom_text(aes(x=0.8,y=0.75,label="Time-varying (8,9,14,17,18)"))+
     
-    geom_line(aes(x=c(0,30),y=c(quantile(fig_df$N,probs=0.9),100000)),col=cbPalette[4],linewidth=2)+
-    geom_text(aes(x=21,y=100000,label="Linear (1,3,4,6,7,10,11,13,15,16)"),col=cbPalette[4])+
+    geom_line(aes(x=c(0,1),y=0.2),linetype="solid",linewidth=2)+
+    geom_text(aes(x=0.5,y=0.25,label="Constant (2,12)"))+
     
-    #geom_line(aes(x=c(0,30),y=0),col=cbPalette[7],linewidth=2)+
-    #geom_text(aes(x=15,y=100000,label="None (8,12)"),col=cbPalette[7])+
-    xlab("Day post-infection")+ylab("RBC clearance")+
-    theme_bw()+
-    theme(axis.title=element_text(size=15),
-          axis.text=element_blank(),
-          axis.ticks=element_blank(),
-          panel.grid=element_blank())
-)
-
-(Nassump <- ggplot()+
-    geom_line(aes(x=seq(0,1,0.01),y=sapply(seq(0,1,0.01),function(x){dnorm(x,0.5,0.35)-0.4})),col=cbPalette[2],linewidth=2)+
-    geom_text(aes(x=0.8,y=0.75,label="Time-varying (8,9,14,17,18)"),col=cbPalette[2])+
+    scale_x_continuous(labels = c("", "\n"), breaks = c(0.05, 0.95))+
     
-    geom_line(aes(x=c(0,1),y=0.2),col=cbPalette[6],linewidth=2)+
-    geom_text(aes(x=0.5,y=0.25,label="Constant (2,12)"),col=cbPalette[6])+
-    
-    geom_line(aes(x=c(0,1),y=c(1,0)),col=cbPalette[4],linewidth=2)+
-    geom_text(aes(x=0.4,y=0.9,label="Linear (1,3,4,6,7,10,11,13,15,16)"),col=cbPalette[4])+
+    ggtitle("B i")+
 
     xlab("Day post-infection")+ylab("RBC clearance")+
     theme_bw()+
     theme(axis.title=element_text(size=15),
-          axis.text=element_blank(),
+          axis.text.x=element_text(size=12),
+          axis.text.y=element_blank(),
           axis.ticks=element_blank(),
-          panel.grid=element_blank())
+          panel.grid=element_blank(),
+          plot.title=element_text(hjust=0,face="bold")))
 )
 
-assump <- ggarrange(REassump,Nassump, nrow = 1, labels = c("A","B"))
+(Qun_assump2 <- ggplot()+
+    
+    geom_line(aes(x=Erange,y=c(1,0)),linetype="longdash",linewidth=2)+
+    geom_text(aes(x=Erange[1]+0.55,y=0.5,label="Linear (1,3,4,6,7,10,11,13,15,16)"),hjust=0)+
+    
+    scale_x_continuous(labels = c("deficit", "homeostatic\nequilibrium"), breaks = c(0.05, 0.95))+
+    
+    ggtitle("ii")+
+    
+    ylim(0,1)+
+    xlab("Erythrocyte density")+ylab("")+
+    theme_bw()+
+    theme(axis.title=element_text(size=15),
+          axis.text.x=element_text(size=12),
+          axis.text.y=element_blank(),
+          axis.ticks=element_blank(),
+          panel.grid=element_blank(),
+          plot.title=element_text(hjust=0,face="bold"))
+)
+
+assump <- ggarrange(RE_assump,Qun_assump1,Qun_assump2, nrow = 1)
+assump
 
 ggsave("Figure1.jpeg",plot=assump,
-       width=27,height=12,units="cm") 
+       width=45,height=15,units="cm") 
