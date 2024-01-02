@@ -49,7 +49,7 @@ reticulocytes <- flow |>
                   labels=trans_format('log10',math_format(10^.x)),
                   limits=c(10^5,10^7))+  
     theme_bw()+
-    xlab("")+ylab("RBC supply\n(density per µL)")+
+    xlab("")+ylab("Reticulocytes\n(density per µL)")+
     #ggtitle("")+
     theme(
       axis.title.y=element_text(size=11),
@@ -93,12 +93,13 @@ K <- sm1 |>
   filter(variable=="K",time<=20,mouseid=="03-01") |>
   ggplot()+
   geom_line(aes(x=time,y=value,group=rep),alpha=0.01)+
+  geom_text(aes(x=15,y=10^7.5,label="Parasite density"))+
   scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x), 
                 labels=trans_format('log10',math_format(10^.x)),
                 limits=c(1,10^7.5))+ 
   theme_bw()+
-  xlab("")+ylab("Parasites,\nK (density per µL)")+
-    ggtitle("Smooth trajectories (output)")+
+  xlab("")+ylab("K (density per µL)")+
+  ggtitle("Smooth trajectories (output)")+
   theme(
     axis.title.y=element_text(size=11),
     axis.title.x=element_text(size=13),
@@ -120,7 +121,7 @@ R <- sm1 |>
                 labels=trans_format('log10',math_format(10^.x)),
                 limits=c(10^5,10^7))+  
   theme_bw()+
-  xlab("")+ylab("RBC supply,\nR (density per µL)")+
+  xlab("")+ylab("R (density per µL)")+
   #ggtitle("")+
   theme(
     axis.title.y=element_text(size=11),
@@ -144,7 +145,7 @@ E <-  sm1 |>
                   labels=trans_format('log10',math_format(10^.x)),
                   limits=c(10^6,10^7))+  
     theme_bw()+
-    xlab("Day post-infection")+ylab("Erythrocytes,\nE (density per µL)")+
+    xlab("Day post-infection")+ylab("E (density per µL)")+
     #ggtitle("")+
     theme(
       axis.title.y=element_text(size=11),
@@ -163,7 +164,7 @@ N <- sm1 |>
     filter(variable=="N",time<=20,mouseid=="03-01") |>
     ggplot()+
     geom_point(aes(x=time,y=value,group=rep,fill="Analyzed trajectories",colour="Analyzed trajectories"),shape = 22,size=8)+
-    geom_text(aes(x=15,y=10^7,label="uRBC clearance"))+
+    geom_text(aes(x=12,y=10^7,label="RBC clearance response"))+
     scale_fill_manual(name='',
                        breaks=c('Analyzed trajectories'),
                        values=c('Analyzed trajectories'='rosybrown1'))+
@@ -175,7 +176,7 @@ N <- sm1 |>
                   labels=trans_format('log10',math_format(10^.x)),
                   limits=c(10^5,10^7))+  
     theme_bw()+
-    xlab("Day post-infection")+ylab("uRBC clearance,\nN (density per µL)")+
+    xlab("Day post-infection")+ylab("N (density per µL)")+
     #ggtitle("")+
     theme(
       axis.title.y=element_text(size=11),
@@ -196,11 +197,12 @@ W <- sm1 |>
     filter(variable=="W",time<=20,mouseid=="03-01") |>
     ggplot()+
     geom_line(aes(x=time,y=value,group=rep),alpha=0.01)+
+    geom_text(aes(x=12,y=10^8,label="iRBC clearance response"))+
     scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x), 
                   labels=trans_format('log10',math_format(10^.x)),
                   limits=c(10^5,10^8))+  
     theme_bw()+
-    xlab("")+ylab("iRBC clearance,\nW (density per µL)")+
+    xlab("")+ylab("W (density per µL)")+
     ggtitle("")+
     theme(
       axis.title.y=element_text(size=11),
@@ -278,7 +280,7 @@ median <- group_traj |>
   scale_fill_manual(values=cbPalette[5])+
   theme_bw()+
   ggtitle("Median trajectory (output)")+
-  xlab("Day post-infection")+ylab("RBC supply (density per µL)")+
+  xlab("Day post-infection")+ylab("")+
   labs(colour="Parasite nutrient (pABA)",fill="Parasite nutrient (pABA)")+
   theme(
     axis.title.y=element_text(size=13),
