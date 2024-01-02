@@ -26,7 +26,13 @@ group_traj |>
   scale_x_continuous(labels=aakmisc::scinot)+
   scale_y_continuous(labels=aakmisc::scinot)+
   scale_colour_manual(values=cbPalette[2:5])+
-  xlab("Erythrocytes (t-1)")+ylab("RBC supply (t)")+
+  #xlab("Erythrocyte density at time t-1 (density per µL)")+ylab("RBC supply at time t (density per µL)")+
+  
+  labs(x=expression(paste("Erythrocyte density at time ", italic("t"), "-1 (density per µL)")),
+       y=expression(paste("RBC supply at time ", italic("t"), " (density per µL)"))
+       )+
+  
+  
   labs(colour="Parasite nutrient (pABA)")+
   theme_bw()+
   theme(
