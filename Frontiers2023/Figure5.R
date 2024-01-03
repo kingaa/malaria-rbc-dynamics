@@ -63,11 +63,11 @@ foreach (
   
   #Models
   models <- list(
-    m1=gam(Qun~s(time, by = box)+box,data=joint_mouse_df),
-    m2=gam(Qun~s(time),data=joint_mouse_df),
-    m3=gam(Qun~1,data=joint_mouse_df),
-    m4=gam(Qun~E,data=joint_mouse_df),
-    m5=gam(Qun~E:box+box,data=joint_mouse_df)
+    A=gam(Qun~s(time, by = box)+box,data=joint_mouse_df),
+    B=gam(Qun~s(time),data=joint_mouse_df),
+    C=gam(Qun~1,data=joint_mouse_df),
+    D=gam(Qun~E,data=joint_mouse_df),
+    E=gam(Qun~E:box+box,data=joint_mouse_df)
   )
   
   models |>
@@ -97,24 +97,70 @@ foreach (
   
   }) -> results_df_Qun
 
+cbPalette <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
+results_df_Qun$pABA <- factor(results_df_Qun$box,
+                              levels=c("04","03","02","01"),
+                              labels=c("Unsupplemented","Low","Medium","High"))
+
 results_bar <- results_df_Qun |> 
   select(r,model) |> 
   unique()
 
-cbPalette <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+results_bar_summ <- table(results_bar$model) |>
+  as.matrix() |>
+  as.data.frame() |>
+  rownames_to_column()
+names(results_bar_summ) <- c("model","freq")
 
-results_df_Qun$pABA <- factor(results_df_Qun$box,
-                          levels=c("04","03","02","01"),
-                          labels=c("Unsupplemented","Low","Medium","High"))
+models_list <- c("A","B","C","D","E")
+models_inc <- results_bar_summ$model |> c()
+models_exc <- models_list[!models_list %in% models_inc]
+results_bar_zero <- as.data.frame(matrix(
+  c(
+    models_exc,
+    rep(0,length(models_exc))
+  ),
+  ncol=2,
+  byrow=FALSE
+))
+names(results_bar_zero) <- c("model","freq")
+results_bar_zero$freq <- as.integer(results_bar_zero$freq)
 
-table(results_bar$model)/1000
+results_bar_plot <- bind_rows(results_bar_summ,results_bar_zero)
 
-results_bar |>
-  ggplot(aes(x=reorder(model, model, function(x)-length(x)),y = (after_stat(count))/sum(after_stat(count))))+
-  geom_bar()+
-  ylab("Frequency")+
-  scale_x_discrete(labels=c("Model B","Model A"))+
+results_bar_plot$name <- factor(results_bar_plot$model,
+                                levels=c("A","B","C","D","E"),
+                                labels=c(
+                                  expression(atop("Model A","time x pABA")),
+                                  expression(atop("Model B","time")),
+                                  expression(atop("Model C","constant")),
+                                  expression(atop("Model D",E[t])),
+                                  expression(atop("Model E",E[t]~x~pABA))
+                                         )
+                                  )
+
+(bar_plot <- results_bar_plot |>
+  ggplot()+
+  geom_bar(aes(x=name,y=freq/1000),stat="identity")+
+  annotate("text",x=3,y=0,label="X",size=5)+
+  annotate("text",x=4,y=0,label="X",size=5)+
+  annotate("text",x=5,y=0,label="X",size=5)+
+    
+  #annotate("text",x=2.75,y=0.5,label=expression(paste("Model A: ",
+   #     Q[t]^un%~%s(time,~by==pABA)+pABA)),size=4,hjust=0,parse=T)+ 
+  #annotate("text",x=2.75,y=0.475,label=expression(paste("Model B: ",
+   #     Q[t]^un%~%s(time))),size=4,hjust=0,parse=T)+
+  #annotate("text",x=2.75,y=0.45,label=expression(paste("Model C: ",
+   #     Q[t]^un%~%1)),size=4,hjust=0,parse=T)+
+  #annotate("text",x=2.75,y=0.425,label=expression(paste("Model D: ",
+   #     Q[t]^un%~%E[t])),size=4,hjust=0,parse=T)+
+  #annotate("text",x=2.75,y=0.4,label=expression(paste("Model E: ",
+   #     Q[t]^un%~%E[t]:pABA+pABA)),size=4,hjust=0,parse=T)+
+    
   theme_bw()+
+  scale_x_discrete(labels = label_parse())+
+  ylab("Frequency model selected")+
   theme(
     axis.title=element_text(size=15),
     axis.text=element_text(size=11),
@@ -125,90 +171,38 @@ results_bar |>
     legend.text=element_text(size=13),
     strip.text=element_text(size=12),
     strip.background=element_blank()
+  )
+)
+
+(medians_plot <- group_traj |>
+  filter(variable=="Qun",time<=20) |>
+  ggplot()+
+  geom_line(aes(x=time,y=med,col=pABA),linewidth=2)+
+  geom_ribbon(aes(x=time,ymin=lo,ymax=hi,fill=pABA),alpha=0.2)+
+  scale_colour_manual(values=cbPalette[2:5])+
+  scale_fill_manual(values=cbPalette[2:5])+
+  theme_bw()+
+    facet_wrap(pABA~.)+
+  ylim(0,1)+
+  labs(colour="Parasite nutrient\n(pABA)",fill="Parasite nutrient\n(pABA)")+
+  xlab("Time (d post-infection)")+ylab("RBC clearance rate (probability/day)")+
+  theme(
+    axis.title=element_text(size=15),
+    strip.text=element_blank(),
+    axis.text=element_text(size=11),
+    #panel.grid=element_blank(),
+    legend.position=c(0.15,0.85),
+    legend.background=element_blank(),
+    legend.title=element_text(size=12),
+    legend.text=element_text(size=10),
+    strip.background=element_blank(),
+    plot.title=element_text(size=17,hjust=0.5)
     
   )
-
-second_model_plot <- results_df_Qun |>
-    filter(model=="m2") |>
-    ggplot()+
-    geom_line(aes(x=time,y=pred,group=r),alpha=0.01)+
-    xlab("")+ylab("")+
-    geom_text(aes(x=15,y=0.975,label="Clearance rate ~ time"),size=4)+
-    scale_y_continuous(lim=c(-0.1,1))+
-    theme_bw()+
-    theme(
-      axis.title=element_text(size=15),
-      axis.text=element_text(size=11),
-      panel.grid=element_blank(),
-      legend.position="none",
-      legend.title=element_text(size=15),
-      legend.text=element_text(size=13),
-      strip.text=element_text(size=12),
-      strip.background=element_blank(),
-      plot.title=element_text(size=14,hjust=0.5)
-      
-    )
-
-best_model_plot <- results_df_Qun |>
-    filter(model=="m1") |>
-    ggplot()+
-    geom_line(aes(x=time,y=pred,group=interaction(r,pABA),col=pABA),alpha=0.075)+
-    xlab("")+
-    scale_colour_manual(values=cbPalette[2:5])+
-    guides(colour = guide_legend(override.aes = list(alpha = 1)))+
-    geom_text(aes(x=13,y=0.975,label="Clearance rate ~ time x pABA"),size=4)+
-    scale_y_continuous(lim=c(-0.1,1))+
-    labs(colour="Parasite nutrient\n(pABA)",y=expression(paste("RBC clearance rate ", (day^{-1}))))+
-    theme_bw()+
-    theme(
-      axis.title=element_text(size=13),
-      axis.text=element_text(size=11),
-      panel.grid=element_blank(),
-      legend.position=c(0.2,0.7),
-      legend.title=element_text(size=8),
-      legend.text=element_text(size=6),
-      strip.text=element_text(size=12),
-      strip.background=element_blank(),
-      plot.title=element_text(size=14,hjust=0.5,face="bold"),
-      panel.border = element_rect(linewidth=4),
-      legend.background = element_blank()
-      
-    )
-
-(best_model_facet <- results_df_Qun |>
-    filter(model=="m1") |>
-    ggplot()+
-    geom_line(aes(x=time,y=pred,group=interaction(r,pABA),col=pABA),alpha=0.075)+
-    xlab("Day post-infection")+ylab("")+
-    scale_colour_manual(values=cbPalette[2:5])+
-    facet_grid(.~pABA)+
-    theme_bw()+
-    theme(
-      axis.title=element_text(size=13),
-      strip.text=element_blank(),
-      axis.text=element_text(size=11),
-      panel.grid=element_blank(),
-      legend.position="none",
-      legend.title=element_text(size=15),
-      legend.text=element_text(size=13),
-      strip.background=element_blank(),
-      plot.title=element_text(size=17,hjust=0.5)
-      
-    )
 )
 
 library("gridExtra")
-library(ggpubr)
-library("cowplot")
-# Arrange plots using arrangeGrob
-# returns a gtable (gt)
-gt <- arrangeGrob(best_model_plot,                               
-                  second_model_plot, best_model_facet,                              
-                  ncol = 2, nrow = 3, 
-                  layout_matrix = cbind(c(1,1,3), c(2,2,3)))
-# Add labels to the arranged plots
-p <- as_ggplot(gt) +                                # transform to a ggplot
-  draw_plot_label(label = c("A", "B", "C"), size = 15,
-                  x = c(0, 0.5, 0), y = c(1, 1, 0.4))
 
-ggsave("Figure5.jpeg",width=22,height=16,units="cm")
+ggarrange(medians_plot, bar_plot, nrow = 1, labels = c("A","B"))
+
+ggsave("Figure5.jpeg",width=35,height=15,units="cm")
