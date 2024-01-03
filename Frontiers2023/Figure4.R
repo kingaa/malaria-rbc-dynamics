@@ -167,23 +167,6 @@ cbPalette <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2",
 
 table(results_bar$b)/1000
 
-results_bar |>
-  ggplot(aes(x=reorder(b, b, function(x)-length(x)),y = (after_stat(count))/sum(after_stat(count))))+
-  geom_bar()+
-  xlab("Breakpoint (day post-infection)")+ylab("Frequency")+
-  theme_bw()+
-  theme(
-    axis.title=element_text(size=15),
-    axis.text=element_text(size=11),
-    panel.grid=element_blank(),
-    legend.position="none",
-    legend.title=element_text(size=15),
-    legend.text=element_text(size=13),
-    strip.text=element_text(size=12),
-    strip.background=element_blank()
-    
-  )
-
 results_bar$label <- factor(results_bar$model_b,
                             levels=c("m6, 9","m3, 9","m5, 9","m2, 9","m1, 10","m1, 9","m4, 9","m4, 10","m5, 10","m6, 10"),
                             labels=c("Model F,\nbreakpoint 9",
@@ -206,25 +189,35 @@ xaxis_labs <- c("Model F,\nbreakpoint 9",
                 "Model D,\nbreakpoint 9",
                 "Model D,\nbreakpoint 10",
                 "Model E,\nbreakpoint 10",
-                "Model F,\nbreakpoint 10")
+                "Model F,\nbreakpoint 10",
+                "Linear,\nuniphasic")
 
-table(results_bar$model_b)/1000
+freq_df <- c(sort(table(results_bar$model_b)/1000,decreasing=TRUE),0) |> 
+  as.data.frame() |> 
+  rownames_to_column()
+names(freq_df) <- c("model","freq")
+freq_df$labs <- xaxis_labs
 
-(bar_plot <- results_bar |>
-  ggplot(aes(x=reorder(model_b, model_b, function(x)-length(x)),y = (after_stat(count))/sum(after_stat(count))))+
-  geom_bar()+
+#(bar_plot <- results_bar |>
+  #ggplot(aes(x=reorder(model_b, model_b, function(x)-length(x)),y = (after_stat(count))/sum(after_stat(count))))+
+
+(bar_plot <- freq_df |>
+  ggplot()+
+  geom_bar(aes(x=reorder(labs, -freq),y=freq),stat="identity")+
   xlab("Model, breakpoint")+ylab("Frequency model selected")+
-  scale_x_discrete(labels=xaxis_labs)+
+  scale_x_discrete(labels=xaxis_labs,breaks=xaxis_labs)+
   #annotate("text",x=5,y=0.55,label="Model F: R~(lagged E):phase+phase",size=5,hjust=0,fontface=3)+
     
-  annotate("text",x=5,y=0.55,label=expression(paste("Model F: ",
-                                                    R[t]%~%(E[t-1]):phase+phase)),size=5,hjust=0,parse=T)+ 
-  annotate("text",x=5,y=0.45,label=expression(paste("Model C: ",
-                                                    R[t]%~%(E[t-1]^{2}+E[t-1]):phase+phase)),size=5,hjust=0,parse=T)+ 
-  annotate("text",x=5,y=0.35,label=expression(paste("Model E: ",
-                                                    R[t]%~%(E[t-1]+pABA):phase+phase)),size=5,hjust=0,parse=T)+
-    annotate("text",x=5,y=0.25,label=expression(paste("Model B: ",
-                                                      R[t]%~%(E[t-1]^{2}+E[t-1]+pABA):phase+phase)),size=5,hjust=0,parse=T)+ 
+  annotate("text",x=11,y=0,label="X",size=5)+
+  
+  annotate("text",x=2,y=0.55,label=expression(paste("Model F: ",
+                                                    R[t]%~%E[t-1]:phase+phase)),size=5,hjust=0,parse=T)+ 
+  annotate("text",x=2,y=0.45,label=expression(paste("Model C: ",
+                                                    R[t]%~%E[t-1]^{2}:phase+E[t-1]:phase+phase)),size=5,hjust=0,parse=T)+ 
+  annotate("text",x=2,y=0.35,label=expression(paste("Model E: ",
+                                                    R[t]%~%E[t-1]:phase+pABA:phase+phase)),size=5,hjust=0,parse=T)+
+    annotate("text",x=2,y=0.25,label=expression(paste("Model B: ",
+                                                      R[t]%~%E[t-1]^{2}:phase+E[t-1]:phase+pABA:phase+phase)),size=5,hjust=0,parse=T)+ 
   theme_bw()+
   theme(
     axis.title=element_text(size=13),
