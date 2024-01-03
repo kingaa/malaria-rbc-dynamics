@@ -182,16 +182,16 @@ results_bar_plot$name <- factor(results_bar_plot$model,
   scale_colour_manual(values=cbPalette[2:5])+
   scale_fill_manual(values=cbPalette[2:5])+
   theme_bw()+
-    facet_wrap(pABA~.)+
+    facet_grid(.~pABA)+
   ylim(0,1)+
   labs(colour="Parasite nutrient\n(pABA)",fill="Parasite nutrient\n(pABA)")+
-  xlab("Time (d post-infection)")+ylab("RBC clearance rate (probability/day)")+
+  xlab("Time (d post-infection)")+ylab("RBC clearance (probability/day)")+
   theme(
     axis.title=element_text(size=15),
     strip.text=element_blank(),
     axis.text=element_text(size=11),
     #panel.grid=element_blank(),
-    legend.position=c(0.15,0.85),
+    legend.position=c(0.1,0.85),
     legend.background=element_blank(),
     legend.title=element_text(size=12),
     legend.text=element_text(size=10),
@@ -203,6 +203,6 @@ results_bar_plot$name <- factor(results_bar_plot$model,
 
 library("gridExtra")
 
-ggarrange(medians_plot, bar_plot, nrow = 1, labels = c("A","B"))
+ggarrange(medians_plot, bar_plot, nrow = 1, labels = c("A","B"), widths=c(0.66,0.33))
 
 ggsave("Figure5.jpeg",width=35,height=15,units="cm")
