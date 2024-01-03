@@ -79,7 +79,7 @@ sm1_sub <- sm1_sub |>
                   limits=c(10^5,10^7))+  
     scale_colour_manual(values=cbPalette[6:8])+
     theme_bw()+
-    xlab("Day post-infection")+ylab("Erythrocytes\n(density per µL)")+
+    xlab("Time (d post-infection)")+ylab("Erythrocytes\n(density per µL)")+
     #ggtitle("")+
     theme(
       axis.title=element_text(size=15),
@@ -154,7 +154,7 @@ data_column <- ggarrange(parasites,reticulocytes,erythrocytes, nrow = 3, labels 
     scale_colour_manual(values=cbPalette[6:8])+
     scale_fill_manual(values=cbPalette[6:8])+
     theme_bw()+
-    xlab("Day post-infection")+ylab("Targeted killing,\nW (density per µL)")+
+    xlab("Time (d post-infection)")+ylab("Targeted killing,\nW (density per µL)")+
     #ggtitle("")+
     theme(
       axis.title.y=element_text(size=11),

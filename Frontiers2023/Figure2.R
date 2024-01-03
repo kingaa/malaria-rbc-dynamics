@@ -71,7 +71,7 @@ erythrocytes <- flow |>
                   labels=trans_format('log10',math_format(10^.x)),
                   limits=c(10^6,10^7))+  
     theme_bw()+
-    xlab("Day post-infection")+ylab("Erythrocytes\n(density per µL)")+
+    xlab("Time (d post-infection)")+ylab("Erythrocytes\n(density per µL)")+
     #ggtitle("")+
     theme(
       axis.title.y=element_text(size=11),
@@ -145,7 +145,7 @@ E <-  sm1 |>
                   labels=trans_format('log10',math_format(10^.x)),
                   limits=c(10^6,10^7))+  
     theme_bw()+
-    xlab("Day post-infection")+ylab("E (density per µL)")+
+    xlab("Time (d post-infection)")+ylab("E (density per µL)")+
     #ggtitle("")+
     theme(
       axis.title.y=element_text(size=11),
@@ -176,7 +176,7 @@ N <- sm1 |>
                   labels=trans_format('log10',math_format(10^.x)),
                   limits=c(10^5,10^7))+  
     theme_bw()+
-    xlab("Day post-infection")+ylab("N (density per µL)")+
+    xlab("Time (d post-infection)")+ylab("N (density per µL)")+
     #ggtitle("")+
     theme(
       axis.title.y=element_text(size=11),
@@ -224,33 +224,32 @@ top_columns <- ggarrange(A_column,B_column,ncol=2,widths=c(0.5,1))
 ###########################
 sm1_sub <- sm1 |>
   as_tibble() |>
-  filter(mouseid!="01-02",mouseid!="02-03",time<=20) |> #remove underdosed mice
-  pivot_wider(names_from=variable,values_from=value) |>
-  filter(box!="05") |>
+  filter(box=="04",variable=="R",time<=20) |>
   group_by(mouseid) |>
   mutate(
-    SM=exp(-M/(R+E)),
-    SN=exp(-N/(R+E)),
-    Qun=SM*(1-SN),
     lik=exp(loglik-max(loglik))
   ) |>
-  ungroup()
+  ungroup() |>
+  pivot_wider(names_from=time,values_from=value) |>
+  sample_n(size=300) |>
+  pivot_longer(cols=`0`:`20`,names_to="time",values_to="R")
+
 sm1_sub$pABA <- factor(sm1_sub$box,levels=c("05","04","03","02","01"),
                        labels=c("Uninfected","Unsupplemented","Low","Medium","High"))
+sm1_sub$time <- as.integer(sm1_sub$time)
 
-high<-sm1_sub |>
-  filter(pABA=="High") |>
+unsupplemented<-sm1_sub |>
   ggplot()+
   geom_line(aes(x=time,y=R,group=interaction(rep,mouse),col=lik,alpha=lik))+
-  geom_text(aes(x=17,y=10^6.9,label="n=2"),size=5)+
+  geom_text(aes(x=17,y=10^6.9,label="n=3"),size=5)+
   #geom_text(aes(x=1,y=10^6.9,label="i"),size=5)+
   scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x), 
                 labels=trans_format('log10',math_format(10^.x)),
                 limits=c(10^5,10^7))+
-  scale_colour_gradient(low=cbPalette[5],high="orange4")+
+  scale_colour_gradient(low="orange",high="orange4",limits=c(0,1))+
   scale_alpha_continuous(guide="none")+
   ggtitle("Smooth trajectories (input)")+
-  xlab("Day post-infection")+ylab("RBC supply (density per µL)")+
+  xlab("Time (d post-infection)")+ylab("RBC supply (density per µL)")+
   labs(alpha="Relative likelihood",colour="Relative likelihood")+
   theme_bw()+
   theme(
@@ -266,21 +265,22 @@ high<-sm1_sub |>
     strip.background=element_blank(),
     strip.text=element_text(size=13)
   )
+unsupplemented
 
 median <- group_traj |>
-  filter(time<=20,pABA=="High",variable=="R") |>
+  filter(time<=20,pABA=="Unsupplemented",variable=="R") |>
   ggplot()+
   geom_line(aes(x=time,y=med,col=pABA),linewidth=2)+
   geom_ribbon(aes(x=time,ymin=lo,ymax=hi,fill=pABA),alpha=0.2)+
-  geom_text(aes(x=17,y=10^6.9,label="n=2"),size=5)+
+  geom_text(aes(x=17,y=10^6.9,label="n=3"),size=5)+
   scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x), 
                 labels=trans_format('log10',math_format(10^.x)),
                 limits=c(10^5,10^7))+
-  scale_colour_manual(values=cbPalette[5])+
-  scale_fill_manual(values=cbPalette[5])+
+  scale_colour_manual(values=cbPalette[2])+
+  scale_fill_manual(values=cbPalette[2])+
   theme_bw()+
   ggtitle("Median trajectory (output)")+
-  xlab("Day post-infection")+ylab("")+
+  xlab("Time (d post-infection)")+ylab("")+
   labs(colour="Parasite nutrient (pABA)",fill="Parasite nutrient (pABA)")+
   theme(
     axis.title.y=element_text(size=13),
@@ -296,7 +296,7 @@ median <- group_traj |>
     legend.background=element_blank()
   )
 
-bottom_row <- ggarrange(high, median, nrow = 1, labels = c("C","D"))
+bottom_row <- ggarrange(unsupplemented, median, nrow = 1, labels = c("C","D"))
 
 ###########################
 #### Overall plot #########

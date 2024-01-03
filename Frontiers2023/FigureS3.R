@@ -176,7 +176,7 @@ best_model_facet <- results_df_R |>
     filter(model=="m1") |>
     ggplot()+
     geom_line(aes(x=time,y=pred,group=interaction(r,pABA),col=pABA),alpha=0.03)+
-    xlab("Day post-infection")+ylab("")+
+    xlab("Time (d post-infection)")+ylab("")+
     scale_colour_manual(values=cbPalette[2:5])+
     scale_y_continuous(label=aakmisc::scinot,lim=range(results_df_R$pred))+
     facet_grid(.~pABA)+

@@ -57,7 +57,7 @@ expFun <- function(E){1/(1+exp(-10*(-E+0.5)))}
     
     ggtitle("B i")+
 
-    xlab("Day post-infection")+ylab("RBC clearance")+
+    xlab("Time (d post-infection)")+ylab("RBC clearance")+
     theme_bw()+
     theme(axis.title=element_text(size=15),
           axis.text.x=element_text(size=12),
@@ -65,11 +65,10 @@ expFun <- function(E){1/(1+exp(-10*(-E+0.5)))}
           axis.ticks=element_blank(),
           panel.grid=element_blank(),
           plot.title=element_text(hjust=0,face="bold")))
-)
 
 (Qun_assump2 <- ggplot()+
     
-    geom_line(aes(x=Erange,y=c(1,0)),linetype="longdash",linewidth=2)+
+    geom_line(aes(x=Erange,y=c(0,1)),linetype="longdash",linewidth=2)+
     geom_text(aes(x=Erange[1]+0.55,y=0.5,label="Linear (1,3,4,6,7,10,11,13,15,16)"),hjust=0)+
     
     scale_x_continuous(labels = c("deficit", "homeostatic\nequilibrium"), breaks = c(0.05, 0.95))+
