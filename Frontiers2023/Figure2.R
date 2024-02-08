@@ -116,7 +116,7 @@ R <- sm1 |>
   filter(variable=="R",time<=20,mouseid=="03-01") |>
   ggplot()+
   geom_line(aes(x=time,y=value,group=rep),alpha=0.01)+
-    geom_text(aes(x=15,y=10^7,label="RBC supply"))+
+    geom_text(aes(x=15,y=10^7,label="Reticulocyte supply"))+
   scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x), 
                 labels=trans_format('log10',math_format(10^.x)),
                 limits=c(10^5,10^7))+  
@@ -249,7 +249,7 @@ unsupplemented<-sm1_sub |>
   scale_colour_gradient(low="orange",high="orange4",limits=c(0,1))+
   scale_alpha_continuous(guide="none")+
   ggtitle("Smooth trajectories (input)")+
-  xlab("Time (d post-infection)")+ylab("RBC supply (density per µL)")+
+  xlab("Time (d post-infection)")+ylab("Reticulocyte supply (density per µL)")+
   labs(alpha="Relative likelihood",colour="Relative likelihood")+
   theme_bw()+
   theme(

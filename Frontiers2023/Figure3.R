@@ -29,7 +29,7 @@ group_traj |>
   #xlab("Erythrocyte density at time t-1 (density per µL)")+ylab("RBC supply at time t (density per µL)")+
   
   labs(x=expression(paste("Erythrocyte density at time ", italic("t"), "-1 (density per µL)")),
-       y=expression(paste("RBC supply at time ", italic("t"), " (density per µL)"))
+       y=expression(paste("Reticulocyte supply at time ", italic("t"), " (density per µL)"))
        )+
   
   

@@ -166,6 +166,9 @@ results_bar <- results_df_RE |>
 cbPalette <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
 
 table(results_bar$b)/1000
+table(results_bar$model_b) |> 
+  as.data.frame() |>
+  arrange(desc(Freq))
 
 results_bar$label <- factor(results_bar$model_b,
                             levels=c("m6, 9","m3, 9","m5, 9","m2, 9","m1, 10","m1, 9","m4, 9","m4, 10","m5, 10","m6, 10"),
@@ -350,6 +353,7 @@ fourth_model_plot <- results_df_RE |>
 
 library("gridExtra")
 library("cowplot")
+library(ggpubr)
 # Arrange plots using arrangeGrob
 # returns a gtable (gt)
 
@@ -357,7 +361,7 @@ gt1 <- bar_plot
 gt2 <- arrangeGrob(best_model_plot, second_model_plot, third_model_plot, fourth_model_plot,
                    ncol = 2, nrow = 2, 
                    layout_matrix = cbind(c(1,3), c(2,4)),
-                   left="RBC supply (t)",
+                   left="Reticulocyte supply (t)",
                    bottom="Erythrocyte density (t-1)")
 
 
