@@ -1,453 +1,210 @@
 #SET DIRECTORY TO SOURCE FILE LOCATION
 
 library(tidyverse)
-library(stringi)
-library(doParallel)
+library(mgcv)
 library(pomp)
-library(panelPomp)
-library(ggpubr)
-library(scales)
+library(foreach)
+library(iterators)
+library(doFuture)
 library(aakmisc)
-library(gridExtra)
-library(cowplot)
+plan(multisession) #for faster results, use multicore outside of RStudio
+
+seed_choice <- 851657743
+set.seed(seed_choice)
+
+##Load in PNAS trajectories
+sm1name <- "m5sm1_mod.rds"
+sm1 <- readRDS(sm1name)
+
+#Create sm1_mod tibble, with columns rep, mouse, mousid, box, time, E, R, lik and key
+sm1 |>
+  as_tibble() |>
+  filter(time<=20,mouseid!="01-02",mouseid!="02-03") |> #remove underdosed mice
+  pivot_wider(names_from=variable,values_from=value) |>
+  group_by(mouseid) |>
+  mutate(
+    lik=exp(loglik-max(loglik))
+  ) |>
+  ungroup() |>
+  filter(box!="05") |> #remove control mice
+  select(rep,mouse,mouseid,box,time,R,lik) |>
+  unite("key",c(rep,box,mouse),sep="_",remove=FALSE) -> sm1_mod
+
+#Loop over reps
+rep_num <- 1000
+
+bake(file="results_df_R.rds",{
+  foreach (
+    r=1:rep_num,
+    .combine=rbind,
+    .options.future = list(seed = seed_choice)
+  ) %dofuture% {
+    
+    mouse_id_list <- unique(sm1_mod$mouseid)
+    
+    joint_mouse_df <- data.frame()
+    for (id in mouse_id_list){
+      
+      key_opts <- sm1_mod |> filter(mouseid==id) |> select(key,lik) |> unique()
+      
+      key_choice <- sample(key_opts$key,size=1,prob=key_opts$lik)
+      
+      sm1_mod_mouse <- sm1_mod |> 
+        filter(key==key_choice)
+      
+      joint_mouse_df <- rbind(joint_mouse_df,sm1_mod_mouse)
+      
+    }
+    
+    joint_mouse_df$box <- factor(joint_mouse_df$box)
+    
+    #Models
+    models <- list(
+      m1=gam(R~s(time, by = box)+box,data=joint_mouse_df),
+      m2=gam(R~s(time),data=joint_mouse_df),
+      m3=gam(R~1,data=joint_mouse_df)
+    )
+    
+    models |>
+      lapply(\(m) tibble(AIC=AIC(m),BIC=BIC(m))) |>
+      bind_rows(.id="model") -> AIC_df
+    
+    ##Extract breakpoints from best model (lowest AIC)
+    AIC_df |>
+      filter(AIC==min(AIC)) -> best
+    
+    
+    chosen_model <- models[[best$model]]
+    coefs <- chosen_model$coefficients
+    
+    newdata <- joint_mouse_df
+    
+    newdata$pred <- predict(chosen_model,newdata)
+    
+    newdata$r <- r
+    newdata$model <- best$model
+    
+    newdata
+    
+  } -> results_df
+  
+  results_df 
+  
+}) -> results_df_R
+
+results_bar <- results_df_R |> 
+  select(r,model) |> 
+  unique()
 
 cbPalette <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
 
-source("POMP_GroupLevel_DataPrep.R")
+results_df_R$pABA <- factor(results_df_R$box,
+                              levels=c("04","03","02","01"),
+                              labels=c("Unsupplemented","Low","Medium","High"))
 
-#### 1-day lag ####
-flow |> 
-  select(time=day,box,pABA,E=Eryth,R=Retic,pABA) |>
-  mutate(RBC=E+R,
-         lagRBC=lag(RBC,1)) |>
-  na.omit() |>
-  filter(time<=20,box!="05",) -> data
+table(results_bar$model)/1000
 
-##Create data frame with breakpoints for each of the four pABA boxes
-box_list <- unique(data$box)
-breakpoint_grid <- as_tibble(
-  matrix(
-    data=rep(c(NA,8,9,10,11),each=4),
-    ncol=4,byrow=TRUE,
-    dimnames=list(NULL,box_list)
-  )
-)
-
-joint_AIC_df <- data.frame()
-for (i in seq(1,nrow(breakpoint_grid),1)){
-  print(i)
-  bp <- breakpoint_grid[i,]
-  
-  if (is.na(bp[1])){
-    
-    data -> df
-    
-    ##Models
-    models <- list(
-      m1=lm(R~poly(lagRBC,2,raw=F):(box-1)+(box-1),data=df),
-      m2=lm(R~(poly(lagRBC,2,raw=F)+box-1),data=df),
-      m3=lm(R~poly(lagRBC,2,raw=F),data=df),
-      m4=lm(R~lagRBC:(box-1)+(box-1),data=df),
-      m5=lm(R~(lagRBC+box-1),data=df),
-      m6=lm(R~lagRBC,data=df)
-    )
-    
-    models |>
-      lapply(\(m) tibble(AIC=AIC(m),BIC=BIC(m),bp)) |>
-      bind_rows(.id="model") -> model_df
-    
-  } else {
-    
-    data |>
-      mutate(
-        phase=as.factor(if_else(time<=unlist(bp)[box],1,2))
-      ) -> df
-    
-    ##Models
-    models <- list(
-      m1=lm(R~poly(lagRBC,2,raw=F):(box-1):(phase-1)+(box-1):(phase-1),data=df),
-      m2=lm(R~(poly(lagRBC,2,raw=F)+box-1):(phase-1)+(phase-1),data=df),
-      m3=lm(R~poly(lagRBC,2,raw=F):(phase-1)+(phase-1),data=df),
-      m4=lm(R~lagRBC:(box-1):(phase-1)+(box-1):(phase-1),data=df),
-      m5=lm(R~(lagRBC+box-1):(phase-1)+(phase-1),data=df),
-      m6=lm(R~lagRBC:(phase-1)+(phase-1),data=df)
-    )
-    
-    models |>
-      lapply(\(m) tibble(AIC=AIC(m),BIC=BIC(m),bp)) |>
-      bind_rows(.id="model") -> model_df
-    
-  }
-  
-  joint_AIC_df <- rbind(joint_AIC_df,model_df)
-}
-
-##Extract breakpoints from best model (lowest AIC)
-joint_AIC_df |>
-  filter(AIC==min(AIC)) -> best
-
-##Obtain data frame with above breakpoints specified
-data |>
-  mutate(
-    phase=as.factor(if_else(time<=as.integer(unlist(best)[box]),1,2))
-  ) -> df
-
-
-##Extract best model based on lowest AIC
-if (is.na(best$`01`)){
-  models <- list(
-    m1=lm(R~poly(lagRBC,2,raw=F):(box-1)+(box-1),data=df),
-    m2=lm(R~(poly(lagRBC,2,raw=F)+box-1),data=df),
-    m3=lm(R~poly(lagRBC,2,raw=F),data=df),
-    m4=lm(R~lagRBC:(box-1)+(box-1),data=df),
-    m5=lm(R~(lagRBC+box-1),data=df),
-    m6=lm(R~lagRBC,data=df)
-  )
-} else {
-  models <- list(
-    m1=lm(R~poly(lagRBC,2,raw=F):(box-1):(phase-1)+(box-1):(phase-1),data=df),
-    m2=lm(R~(poly(lagRBC,2,raw=F)+box-1):(phase-1)+(phase-1),data=df),
-    m3=lm(R~poly(lagRBC,2,raw=F):(phase-1)+(phase-1),data=df),
-    m4=lm(R~lagRBC:(box-1):(phase-1)+(box-1):(phase-1),data=df),
-    m5=lm(R~(lagRBC+box-1):(phase-1)+(phase-1),data=df),
-    m6=lm(R~lagRBC:(phase-1)+(phase-1),data=df)
-  )
-}
-
-chosen_model <- models[[best$model]]
-coefs <- chosen_model$coefficients
-
-pred <- model.matrix(chosen_model) %*% coefs |> as.data.frame() |> select(pred=V1)
-df <- cbind(df,pred)
-df$b <- if (is.na(best$`01`)){"None"} else {best$`01`}
-df$model <- best$model
-
-#Plotting
-lag1 <- df |>
-  ggplot()+
-  geom_line(aes(x=lagRBC,y=pred,group=interaction(phase,pABA),col=pABA))+
-  scale_x_continuous(labels = aakmisc::scinot)+
-  scale_y_continuous(labels = aakmisc::scinot,limits=c(0,4000000))+
-  annotate("text",x=7000000,y=3200000,label="Phase 2",size=5)+
-  annotate("text",x=6000000,y=1100000,label="Phase 1",size=5)+
-  geom_segment(aes(x=6000000,xend=6000000,y=1000000,yend=600000))+
-  geom_segment(aes(x=7000000,xend=5900000,y=3000000,yend=2500000))+
-  xlab("")+ylab("Reticulocyte supply (t)")+
-  scale_colour_manual(values=cbPalette[2:5])+
-  geom_text(aes(x=7500000,y=3900000,label="Model B, breakpoint 9"))+
+results_bar |>
+  ggplot(aes(x=reorder(model, model, function(x)-length(x)),y = (after_stat(count))/sum(after_stat(count))))+
+  geom_bar()+
+  ylab("Frequency")+
+  scale_x_discrete(labels=c("Model 2","Model 1"))+
   theme_bw()+
-  guides(colour = guide_legend(override.aes = list(alpha = 1)))+
-  labs(x=expression(paste("RBC density at time ", italic("t"), "-1 (density per µL)")),
-       y=expression(paste("Reticulocyte supply at time ", italic("t"), " (density per µL)"),
-                    colour="Parasite nutrient (pABA)"))+
   theme(
     axis.title=element_text(size=15),
-    axis.title.y=element_text(size=15,colour="black"),
-    axis.text=element_text(size=12),
-    axis.text.x=element_text(colour="black"),
-    panel.grid.minor=element_blank(),
-    legend.position=c(0.2,0.8),
-    legend.background=element_blank(),
-    legend.title=element_text(size=13),
-    legend.text=element_text(size=10),
-    strip.text=element_text(size=12),
-    strip.background=element_blank(),
-    plot.title=element_text(size=14,hjust=0.5,face="bold")#,
-    #panel.border = element_rect(linewidth=4)
-    
-  )
-lag1
-
-#### 2-day lag ####
-flow |> 
-  select(time=day,box,pABA,E=Eryth,R=Retic,pABA) |>
-  mutate(RBC=E+R,
-         lagRBC=lag(RBC,2)) |>
-  na.omit() |>
-  filter(time<=20,box!="05") -> data
-
-##Create data frame with breakpoints for each of the four pABA boxes
-box_list <- unique(data$box)
-breakpoint_grid <- as_tibble(
-  matrix(
-    data=rep(c(NA,8,9,10,11),each=4),
-    ncol=4,byrow=TRUE,
-    dimnames=list(NULL,box_list)
-  )
-)
-
-joint_AIC_df <- data.frame()
-for (i in seq(1,nrow(breakpoint_grid),1)){
-  print(i)
-  bp <- breakpoint_grid[i,]
-  
-  if (is.na(bp[1])){
-    
-    data -> df
-    
-    ##Models
-    models <- list(
-      m1=lm(R~poly(lagRBC,2,raw=F):(box-1)+(box-1),data=df),
-      m2=lm(R~(poly(lagRBC,2,raw=F)+box-1),data=df),
-      m3=lm(R~poly(lagRBC,2,raw=F),data=df),
-      m4=lm(R~lagRBC:(box-1)+(box-1),data=df),
-      m5=lm(R~(lagRBC+box-1),data=df),
-      m6=lm(R~lagRBC,data=df)
-    )
-    
-    models |>
-      lapply(\(m) tibble(AIC=AIC(m),BIC=BIC(m),bp)) |>
-      bind_rows(.id="model") -> model_df
-    
-  } else {
-    
-    data |>
-      mutate(
-        phase=as.factor(if_else(time<=unlist(bp)[box],1,2))
-      ) -> df
-    
-    ##Models
-    models <- list(
-      m1=lm(R~poly(lagRBC,2,raw=F):(box-1):(phase-1)+(box-1):(phase-1),data=df),
-      m2=lm(R~(poly(lagRBC,2,raw=F)+box-1):(phase-1)+(phase-1),data=df),
-      m3=lm(R~poly(lagRBC,2,raw=F):(phase-1)+(phase-1),data=df),
-      m4=lm(R~lagRBC:(box-1):(phase-1)+(box-1):(phase-1),data=df),
-      m5=lm(R~(lagRBC+box-1):(phase-1)+(phase-1),data=df),
-      m6=lm(R~lagRBC:(phase-1)+(phase-1),data=df)
-    )
-    
-    models |>
-      lapply(\(m) tibble(AIC=AIC(m),BIC=BIC(m),bp)) |>
-      bind_rows(.id="model") -> model_df
-    
-  }
-  
-  joint_AIC_df <- rbind(joint_AIC_df,model_df)
-}
-
-##Extract breakpoints from best model (lowest AIC)
-joint_AIC_df |>
-  filter(AIC==min(AIC)) -> best
-
-##Obtain data frame with above breakpoints specified
-data |>
-  mutate(
-    phase=as.factor(if_else(time<=as.integer(unlist(best)[box]),1,2))
-  ) -> df2
-
-
-##Extract best model based on lowest AIC
-if (is.na(best$`01`)){
-  models <- list(
-    m1=lm(R~poly(lagRBC,2,raw=F):(box-1)+(box-1),data=df2),
-    m2=lm(R~(poly(lagRBC,2,raw=F)+box-1),data=df2),
-    m3=lm(R~poly(lagRBC,2,raw=F),data=df2),
-    m4=lm(R~lagRBC:(box-1)+(box-1),data=df2),
-    m5=lm(R~(lagRBC+box-1),data=df2),
-    m6=lm(R~lagRBC,data=df2)
-  )
-} else {
-  models <- list(
-    m1=lm(R~poly(lagRBC,2,raw=F):(box-1):(phase-1)+(box-1):(phase-1),data=df2),
-    m2=lm(R~(poly(lagRBC,2,raw=F)+box-1):(phase-1)+(phase-1),data=df2),
-    m3=lm(R~poly(lagRBC,2,raw=F):(phase-1)+(phase-1),data=df2),
-    m4=lm(R~lagRBC:(box-1):(phase-1)+(box-1):(phase-1),data=df2),
-    m5=lm(R~(lagRBC+box-1):(phase-1)+(phase-1),data=df2),
-    m6=lm(R~lagRBC:(phase-1)+(phase-1),data=df2)
-  )
-}
-
-chosen_model <- models[[best$model]]
-coefs <- chosen_model$coefficients
-
-pred <- model.matrix(chosen_model) %*% coefs |> as.data.frame() |> select(pred=V1)
-df2 <- cbind(df2,pred)
-df2$b <- if (is.na(best$`01`)){"None"} else {best$`01`}
-df2$model <- best$model
-
-#Plotting
-lag2 <- df2 |>
-  ggplot()+
-  geom_line(aes(x=lagRBC,y=pred,group=interaction(phase,pABA),col=pABA))+
-  scale_x_continuous(labels = aakmisc::scinot)+
-  scale_y_continuous(labels = aakmisc::scinot,limits=c(0,4000000))+
-  annotate("text",x=7000000,y=3200000,label="Phase 2",size=5)+
-  annotate("text",x=6000000,y=1100000,label="Phase 1",size=5)+
-  geom_segment(aes(x=6000000,xend=6000000,y=1000000,yend=800000))+
-  geom_segment(aes(x=7000000,xend=5900000,y=3000000,yend=2400000))+
-  scale_colour_manual(values=cbPalette[2:5])+
-  geom_text(aes(x=7500000,y=3900000,label="Model B, breakpoint 9"))+
-  theme_bw()+
-  guides(colour = guide_legend(override.aes = list(alpha = 1)))+
-  labs(x=expression(paste("RBC density at time ", italic("t"), "-2 (density per µL)")),
-       y=expression(paste("Reticulocyte supply at time ", italic("t"), " (density per µL)"),
-                    colour="Parasite nutrient (pABA)"))+
-  theme(
-    axis.title=element_text(size=15),
-    axis.title.y=element_text(size=15,colour="white"),
-    axis.text=element_text(size=12),
-    axis.text.x=element_text(colour="black"),
-    panel.grid.minor=element_blank(),
+    axis.text=element_text(size=11),
+    axis.title.x=element_blank(),
+    panel.grid=element_blank(),
     legend.position="none",
-    legend.background=element_blank(),
-    legend.title=element_text(size=13),
-    legend.text=element_text(size=10),
+    legend.title=element_text(size=15),
+    legend.text=element_text(size=13),
     strip.text=element_text(size=12),
-    strip.background=element_blank(),
-    plot.title=element_text(size=14,hjust=0.5,face="bold")#,
-    #panel.border = element_rect(linewidth=4)
+    strip.background=element_blank()
     
   )
-lag2
 
-#### 3-day lag ####
-flow |> 
-  select(time=day,box,pABA,E=Eryth,R=Retic,pABA) |>
-  mutate(RBC=E+R,
-         lagRBC=lag(RBC,3)) |>
-  na.omit() |>
-  filter(time<=20,box!="05") -> data
+range(results_df_R$pred)
 
-##Create data frame with breakpoints for each of the four pABA boxes
-box_list <- unique(data$box)
-breakpoint_grid <- as_tibble(
-  matrix(
-    data=rep(c(NA,8,9,10,11),each=4),
-    ncol=4,byrow=TRUE,
-    dimnames=list(NULL,box_list)
-  )
-)
-
-joint_AIC_df <- data.frame()
-for (i in seq(1,nrow(breakpoint_grid),1)){
-  print(i)
-  bp <- breakpoint_grid[i,]
-  
-  if (is.na(bp[1])){
-    
-    data -> df
-    
-    ##Models
-    models <- list(
-      m1=lm(R~poly(lagRBC,2,raw=F):(box-1)+(box-1),data=df),
-      m2=lm(R~(poly(lagRBC,2,raw=F)+box-1),data=df),
-      m3=lm(R~poly(lagRBC,2,raw=F),data=df),
-      m4=lm(R~lagRBC:(box-1)+(box-1),data=df),
-      m5=lm(R~(lagRBC+box-1),data=df),
-      m6=lm(R~lagRBC,data=df)
+second_model_plot <- results_df_R |>
+    filter(model=="m2") |>
+    ggplot()+
+    geom_line(aes(x=time,y=pred,group=r),alpha=0.075)+
+    xlab("")+ylab("")+
+    geom_text(aes(x=17,y=4.7e6,label="RBC supply ~ time"),size=3)+
+    scale_y_continuous(label=aakmisc::scinot,lim=range(results_df_R$pred))+
+    theme_bw()+
+    theme(
+      axis.title=element_text(size=13),
+      axis.text=element_text(size=11),
+      panel.grid=element_blank(),
+      legend.position="none",
+      legend.title=element_text(size=15),
+      legend.text=element_text(size=13),
+      strip.text=element_text(size=12),
+      strip.background=element_blank(),
+      plot.title=element_text(size=14,hjust=0.5)
+      
     )
-    
-    models |>
-      lapply(\(m) tibble(AIC=AIC(m),BIC=BIC(m),bp)) |>
-      bind_rows(.id="model") -> model_df
-    
-  } else {
-    
-    data |>
-      mutate(
-        phase=as.factor(if_else(time<=unlist(bp)[box],1,2))
-      ) -> df
-    
-    ##Models
-    models <- list(
-      m1=lm(R~poly(lagRBC,2,raw=F):(box-1):(phase-1)+(box-1):(phase-1),data=df),
-      m2=lm(R~(poly(lagRBC,2,raw=F)+box-1):(phase-1)+(phase-1),data=df),
-      m3=lm(R~poly(lagRBC,2,raw=F):(phase-1)+(phase-1),data=df),
-      m4=lm(R~lagRBC:(box-1):(phase-1)+(box-1):(phase-1),data=df),
-      m5=lm(R~(lagRBC+box-1):(phase-1)+(phase-1),data=df),
-      m6=lm(R~lagRBC:(phase-1)+(phase-1),data=df)
+
+best_model_plot <- results_df_R |>
+    filter(model=="m1") |>
+    ggplot()+
+    geom_line(aes(x=time,y=pred,group=interaction(r,pABA),col=pABA),alpha=0.03)+
+    xlab("")+ylab("RBC supply (density per μL)")+
+    labs(colour="Parasite nutrient (pABA)")+
+    scale_colour_manual(values=cbPalette[2:5])+
+    geom_text(aes(x=15,y=4.7e6,label="RBC supply ~ time x pABA"),size=3)+
+    guides(colour = guide_legend(override.aes = list(alpha = 1)))+
+    scale_y_continuous(label=aakmisc::scinot,lim=range(results_df_R$pred))+
+    theme_bw()+
+    theme(
+      axis.title=element_text(size=13),
+      axis.text=element_text(size=11),
+      panel.grid=element_blank(),
+      legend.position=c(0.275,0.7),
+      legend.background = element_blank(),
+      legend.title=element_text(size=10),
+      legend.text=element_text(size=8),
+      strip.text=element_text(size=12),
+      strip.background=element_blank(),
+      plot.title=element_text(size=14,hjust=0.5,face="bold"),
+      panel.border = element_rect(linewidth=4)
+      
     )
-    
-    models |>
-      lapply(\(m) tibble(AIC=AIC(m),BIC=BIC(m),bp)) |>
-      bind_rows(.id="model") -> model_df
-    
-  }
-  
-  joint_AIC_df <- rbind(joint_AIC_df,model_df)
-}
 
-##Extract breakpoints from best model (lowest AIC)
-joint_AIC_df |>
-  filter(AIC==min(AIC)) -> best
+best_model_facet <- results_df_R |>
+    filter(model=="m1") |>
+    ggplot()+
+    geom_line(aes(x=time,y=pred,group=interaction(r,pABA),col=pABA),alpha=0.03)+
+    xlab("Time (d post-infection)")+ylab("")+
+    scale_colour_manual(values=cbPalette[2:5])+
+    scale_y_continuous(label=aakmisc::scinot,lim=range(results_df_R$pred))+
+    facet_grid(.~pABA)+
+    theme_bw()+
+    theme(
+      axis.title=element_text(size=13),
+      strip.text=element_blank(),
+      axis.text=element_text(size=11),
+      panel.grid=element_blank(),
+      legend.position="none",
+      legend.title=element_text(size=12),
+      legend.text=element_text(size=11),
+      strip.background=element_blank(),
+      plot.title=element_text(size=17,hjust=0.5)
+      
+    )
 
-##Obtain data frame with above breakpoints specified
-data |>
-  mutate(
-    phase=as.factor(if_else(time<=as.integer(unlist(best)[box]),1,2))
-  ) -> df3
-
-
-##Extract best model based on lowest AIC
-if (is.na(best$`01`)){
-  models <- list(
-    m1=lm(R~poly(lagRBC,2,raw=F):(box-1)+(box-1),data=df3),
-    m2=lm(R~(poly(lagRBC,2,raw=F)+box-1),data=df3),
-    m3=lm(R~poly(lagRBC,2,raw=F),data=df3),
-    m4=lm(R~lagRBC:(box-1)+(box-1),data=df3),
-    m5=lm(R~(lagRBC+box-1),data=df3),
-    m6=lm(R~lagRBC,data=df3)
-  )
-} else {
-  models <- list(
-    m1=lm(R~poly(lagRBC,2,raw=F):(box-1):(phase-1)+(box-1):(phase-1),data=df3),
-    m2=lm(R~(poly(lagRBC,2,raw=F)+box-1):(phase-1)+(phase-1),data=df3),
-    m3=lm(R~poly(lagRBC,2,raw=F):(phase-1)+(phase-1),data=df3),
-    m4=lm(R~lagRBC:(box-1):(phase-1)+(box-1):(phase-1),data=df3),
-    m5=lm(R~(lagRBC+box-1):(phase-1)+(phase-1),data=df3),
-    m6=lm(R~lagRBC:(phase-1)+(phase-1),data=df3)
-  )
-}
-
-chosen_model <- models[[best$model]]
-coefs <- chosen_model$coefficients
-
-pred <- model.matrix(chosen_model) %*% coefs |> as.data.frame() |> select(pred=V1)
-df3 <- cbind(df3,pred)
-df3$b <- if (is.na(best$`01`)){"None"} else {best$`01`}
-df3$model <- best$model
-
-#Plotting
-lag3 <- df3 |>
-  ggplot()+
-  geom_line(aes(x=lagRBC,y=pred,group=interaction(phase,pABA),col=pABA))+
-  scale_x_continuous(labels = aakmisc::scinot)+
-  scale_y_continuous(labels = aakmisc::scinot,limits=c(0,4000000))+
-  annotate("text",x=7000000,y=3200000,label="Phase 2",size=5)+
-  annotate("text",x=6000000,y=1100000,label="Phase 1",size=5)+
-  geom_segment(aes(x=6000000,xend=6000000,y=1000000,yend=650000))+
-  geom_segment(aes(x=7000000,xend=5700000,y=3000000,yend=2200000))+
-  scale_colour_manual(values=cbPalette[2:5])+
-  geom_text(aes(x=7500000,y=3900000,label="Model E, breakpoint 9"))+
-  theme_bw()+
-  guides(colour = guide_legend(override.aes = list(alpha = 1)))+
-  labs(x=expression(paste("RBC density at time ", italic("t"), "-3 (density per µL)")),
-       y=expression(paste("Reticulocyte supply at time ", italic("t"), " (density per µL)"),
-                    colour="Parasite nutrient (pABA)"))+
-  theme(
-    axis.title=element_text(size=15),
-    axis.title.y=element_text(size=15,colour="white"),
-    axis.text=element_text(size=12),
-    axis.text.x=element_text(colour="black"),
-    panel.grid.minor=element_blank(),
-    legend.position="none",
-    legend.background=element_blank(),
-    legend.title=element_text(size=10),
-    legend.text=element_text(size=8),
-    strip.text=element_text(size=12),
-    strip.background=element_blank(),
-    plot.title=element_text(size=14,hjust=0.5,face="bold")#,
-    #panel.border = element_rect(linewidth=4)
-    
-  )
-lag3
-
-#Plotting together
-gt <- arrangeGrob(lag1,lag2,lag3,nrow=1)
-
+library("gridExtra")
+library("cowplot")
+# Arrange plots using arrangeGrob
+# returns a gtable (gt)
+gt <- arrangeGrob(best_model_plot,                               
+                  second_model_plot, best_model_facet,                              
+                  ncol = 2, nrow = 3, 
+                  layout_matrix = cbind(c(1,1,3), c(2,2,3)))
 # Add labels to the arranged plots
 p <- as_ggplot(gt) +                                # transform to a ggplot
   draw_plot_label(label = c("A", "B", "C"), size = 15,
-                  x = c(0,0.33,0.66), y = c(1,1,1))
-p
-ggsave("FigureS6.jpeg",width=40,height=14,units="cm")
+                  x = c(0, 0.5, 0), y = c(1, 1, 0.4))
+
+ggsave("FigureS6.jpeg",width=22,height=16,units="cm")
