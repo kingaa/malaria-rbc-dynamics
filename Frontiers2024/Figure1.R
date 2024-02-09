@@ -23,13 +23,13 @@ expFun <- function(E){1/(1+exp(-10*(-E+0.5)))}
 (RE_assump <- ggplot()+
     
     geom_line(aes(x=Erange,y=c(0.25,0.25)),linetype="solid",linewidth=2)+
-    geom_text(aes(x=Erange[1],y=0.29,label="Constant (1,3,6,7,8,10,11,12)"),hjust=0)+
+    geom_text(aes(x=Erange[1],y=0.29,label="Constant (1,4,7,8,11,12)"),hjust=0)+
     
     geom_line(aes(x=Erange,y=c(1,0)),linetype="longdash",linewidth=2)+
-    geom_text(aes(x=Erange[1]+0.55,y=0.5,label="Linear (4,5,10,13,15,16)"),hjust=0)+
+    geom_text(aes(x=Erange[1]+0.55,y=0.5,label="Linear (5,6,11,14,16,17)"),hjust=0)+
     
     geom_line(aes(x=seq(0,1,0.01),y=sapply(seq(0,1,0.01),expFun)),linewidth=2,linetype="dotted")+
-    geom_text(aes(x=Erange[1]+0.2,y=0.99,label="Hill function (2)"),hjust=0)+
+    geom_text(aes(x=Erange[1]+0.2,y=0.99,label="Hill or sigmoid function (2,4,18)"),hjust=0)+
     
     scale_x_continuous(labels = c("deficit", "homeostatic\nequilibrium"), breaks = c(0.05, 0.95))+
     
