@@ -257,7 +257,7 @@ best_model_plot <- results_df_RBC |>
   geom_segment(aes(x=7000000,xend=6100000,y=3000000,yend=2600000))+
   xlab("")+ylab("Reticulocyte supply (t)")+
   scale_colour_manual(values=cbPalette[2:5])+
-  #geom_text(aes(x=7500000,y=3900000,label="Model B, breakpoint 10"))+
+  geom_text(aes(x=7500000,y=3900000,label="Model B, breakpoint 10"))+
   theme_bw()+
   guides(colour = guide_legend(override.aes = list(alpha = 1)))+
   labs(colour="Parasite nutrient (pABA)")+
