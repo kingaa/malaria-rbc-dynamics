@@ -54,6 +54,8 @@ data_model$model <- factor(data_model$model,
                            labels=c("Model A","Model B","Model C","Model D","Model E","Model F"))
 data_model$lag <- factor(data_model$lag,levels=c(1,2,3),labels=c("1-day","2-day","3-day"))
 
+data_model |> group_by(model) |> summarize(percent=sum(n)/3000)
+
 data_bp <- data |>
   group_by(lag,b) |>
   count()
@@ -88,7 +90,7 @@ gt2 <- data_bp |>
     legend.position="top"
   )
 
-gt <- arrangeGrob(gt1,gt2,nrow=1)
+gt <- arrangeGrob(gt2,gt1,nrow=1)
 
 # Add labels to the arranged plots
 p <- as_ggplot(gt) +                                # transform to a ggplot
@@ -130,17 +132,18 @@ facet_labels <- data_plot |>
   unique()
 
 phase_labels <- data.frame(
-  phase1 = c("Phase 1","","","","",""),
-  phase2 = c("Phase 2","","","","",""),
+  phase1 = c("Phase 1","Phase 1","","","",""),
+  phase2 = c("Phase 2","Phase 2","","","",""),
   lag_label   = c("i = 1","i = 1","i = 2","i = 2","i = 3","i = 3"),
   rank = c("First","Second","First","Second","First","Second")
 )
                           
 
-prediction_facet <- data_plot |>
-  ggplot()+
-  geom_line(aes(x=lagRBC,y=pred,group=interaction(r,phase,pABA),col=pABA),alpha=0.05)+
-  geom_text(data=phase_labels,aes(x=7500000,y=3000000,label=phase2))+
+prediction_facet <- ggplot()+
+  geom_line(data=filter(data_plot,model!="Model C"),aes(x=lagRBC,y=pred,group=interaction(r,phase,pABA),col=pABA),alpha=0.05)+
+  geom_line(data=filter(data_plot,model=="Model C"),aes(x=lagRBC,y=pred,group=interaction(r,phase,pABA)),alpha=0.05)+
+  geom_text(data=filter(phase_labels,rank=="First"),aes(x=7500000,y=3000000,label=phase2))+
+  geom_text(data=filter(phase_labels,rank!="First"),aes(x=6500000,y=3000000,label=phase2))+
   geom_text(data=phase_labels,aes(x=5000000,y=1000000,label=phase1))+
   scale_x_continuous(labels = aakmisc::scinot,limits=c(0,10000000))+
   scale_y_continuous(labels = aakmisc::scinot,limits=c(0,4600000))+
