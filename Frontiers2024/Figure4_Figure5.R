@@ -8,6 +8,8 @@ library(iterators)
 library(doFuture)
 library(aakmisc)
 library(egg)
+library(ggpubr)
+library(cowplot)
 
 cbModels <- c("#332288","#117733","#88CCEE","#DDCC77","#CC6677","#882255")
 cbBreakpoint <- c("#44AA99","#AA4499","#D55E00","#999999")
@@ -126,17 +128,26 @@ data_plot$model_label <- factor(data_plot$model_key,
 facet_labels <- data_plot |>
   select(lag_label,rank,model_label) |> 
   unique()
+
+phase_labels <- data.frame(
+  phase1 = c("Phase 1","","","","",""),
+  phase2 = c("Phase 2","","","","",""),
+  lag_label   = c("i = 1","i = 1","i = 2","i = 2","i = 3","i = 3"),
+  rank = c("First","Second","First","Second","First","Second")
+)
                           
 
 prediction_facet <- data_plot |>
   ggplot()+
   geom_line(aes(x=lagRBC,y=pred,group=interaction(r,phase,pABA),col=pABA),alpha=0.05)+
+  geom_text(data=phase_labels,aes(x=7500000,y=3000000,label=phase2))+
+  geom_text(data=phase_labels,aes(x=5000000,y=1000000,label=phase1))+
   scale_x_continuous(labels = aakmisc::scinot,limits=c(0,10000000))+
   scale_y_continuous(labels = aakmisc::scinot,limits=c(0,4600000))+
   scale_colour_manual(values=cbpABA[2:5])+
   guides(colour = guide_legend(override.aes = list(alpha = 1)))+
   geom_text(data=facet_labels,aes(x=6250000,y=4500000,label=model_label))+
-  labs(colour="Parasite nutrient (pABA)",x=expression(paste("RBC density at time ", italic("t-i"), " (density per µL)")),
+  labs(colour="Parasite nutrient (pABA)",x=expression(paste("RBC density at time ", italic("t"), "-i (density per µL)")),
        y=expression(paste("Reticulocyte supply at time ", italic("t"), " (density per µL)")))+
   facet_grid(lag_label~rank)+
   theme_bw()+
@@ -148,6 +159,7 @@ prediction_facet <- data_plot |>
     panel.grid.minor = element_blank(),
     legend.position="bottom"
   )
+prediction_facet
 prediction_facet_tagged <- tag_facet(prediction_facet,tag_pool=c("A","B","C","D","E","F"),open="",close="")
 
 ggsave("Figure5.jpeg",width=18,height=20,units="cm")
