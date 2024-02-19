@@ -157,14 +157,21 @@ bake(file="results_df_RBC_lag1.rds",{
     chosen_model <- models[[best$model]]
     coefs <- chosen_model$coefficients
     
+    res <- chosen_model$residuals
+    res <- res[df$time >= 4]
+    n <- length(res)
+    sigma <- sqrt(sum(res^2)/n)
+    loglik_manual <- -(n/2)*(1+log(2*pi*sigma^2))
+    
     pred <- model.matrix(chosen_model) %*% coefs |> as.data.frame() |> select(pred=V1)
     df <- cbind(df,pred)
     df$r <- r
     df$b <- if (is.na(best$`01`)){"None"} else {best$`01`}
     df$model <- best$model
+    df$loglik <- loglik_manual
     
     df
-    
+
   } -> results_df
   
   results_df

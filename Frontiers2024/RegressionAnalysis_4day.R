@@ -48,7 +48,7 @@ breakpoint_grid <- as_tibble(
 #Loop over reps
 rep_num <- 1000
 
-bake(file="results_df_RBC_lag3.rds",{
+bake(file="results_df_RBC_lag4.rds",{
   foreach (
     r=1:rep_num,
     .combine=rbind,
@@ -66,7 +66,7 @@ bake(file="results_df_RBC_lag3.rds",{
       
       sm1_mod_mouse <- sm1_mod |> 
         filter(key==key_choice) |>
-        mutate(lagRBC=lag(RBC,3)) |>
+        mutate(lagRBC=lag(RBC,4)) |>
         na.omit()
       
       joint_mouse_df <- rbind(joint_mouse_df,sm1_mod_mouse)
@@ -158,9 +158,8 @@ bake(file="results_df_RBC_lag3.rds",{
     coefs <- chosen_model$coefficients
     
     res <- chosen_model$residuals
-    res <- res[df$time >= 4]
     n <- length(res)
-    sigma <- sqrt(sum(res^2)/n)
+    sigma = sqrt(sum(res^2)/n)
     loglik_manual <- -(n/2)*(1+log(2*pi*sigma^2))
     
     pred <- model.matrix(chosen_model) %*% coefs |> as.data.frame() |> select(pred=V1)
@@ -176,4 +175,16 @@ bake(file="results_df_RBC_lag3.rds",{
   
   results_df
   
-})
+}) -> results_df_RBC
+
+results_bar <- results_df_RBC |> 
+  select(r,b,model) |> 
+  unique() |>
+  unite("model_b",c(model,b),sep=", ",remove=FALSE)
+
+cbPalette <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
+table(results_bar$b)/1000
+table(results_bar$model_b) |> 
+  as.data.frame() |>
+  arrange(desc(Freq))
