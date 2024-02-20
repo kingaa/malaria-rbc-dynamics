@@ -16,7 +16,10 @@ stopifnot(
   "n_total incorrect"=dat |> reframe(n_total+lag) |> distinct() |> nrow()==1,
   "breakpoints inconsistent"=dat |>
     select(model,lag,rep,b1,b2,b3,b4) |>
-    filter(b1 != b2 | b2 != b3 | b3 != b4) |> nrow()==0
+    filter(b1 != b2 | b2 != b3 | b3 != b4) |> nrow()==0,
+  "inconsistent parameter count (1)"=dat |> filter(p_total!=p_sub) |> nrow()==0,
+  "inconsistent parameter count (2)"=dat |> filter(coef_total!=p_total) |> nrow()==0,
+  "inconsistent parameter count (3)"=dat |> filter(coef_sub!=p_sub) |> nrow()==0
 )
 
 dat |>
@@ -26,7 +29,9 @@ dat |>
     bp=coalesce(as.character(bp),"NA"),
     bp=ordered(bp,levels=c("NA",8,9,10,11)),
     lag=ordered(lag),
-    AICc_sub=AIC_sub+2*p_sub*(p_sub+1)/(n_sub-p_sub-1)
+    ##    AIC=-2*loglik_total*n_sub/n_total+2*p_total,
+    AIC=AIC_sub,
+    AICc=AIC+2*p_sub*(p_sub+1)/(n_sub-p_sub-1)
   ) -> dat
 
 stopifnot(
@@ -37,11 +42,11 @@ stopifnot(
 )
 
 dat |>
-  select(model,bp,lag,rep,AICc_sub) |>
-  ##  select(model,bp,lag,rep,AIC_sub) |>
+  select(model,bp,lag,rep,AICc) |>
+  ##  select(model,bp,lag,rep,AIC) |>
   group_by(rep) |>
-  filter(AICc_sub==min(AICc_sub)) |>
-  ##  filter(AIC_sub==min(AIC_sub)) |>
+  filter(AICc==min(AICc)) |>
+  ##  filter(AIC==min(AIC)) |>
   ungroup() |>
   count(model,bp,lag) |>
   mutate(freq=n/sum(n)) -> freqs
