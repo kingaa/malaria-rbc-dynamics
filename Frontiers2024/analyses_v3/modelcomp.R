@@ -23,16 +23,17 @@ stopifnot(
 )
 
 dat |>
-  select(-b2,-b3,-b4) |>
   rename(bp=b1) |>
   mutate(
     bp=coalesce(as.character(bp),"NA"),
     bp=ordered(bp,levels=c("NA",8,9,10,11)),
     lag=ordered(lag),
-    ##    AIC=-2*loglik_total*n_sub/n_total+2*p_total,
+    n=n_sub,
+    p=p_total+1,
     AIC=AIC_sub,
-    AICc=AIC+2*p_sub*(p_sub+1)/(n_sub-p_sub-1)
-  ) -> dat
+    AICc=AIC+2*p*(p+1)/(n-p-1)
+  ) |>
+  select(model,bp,lag,rep,p,n,AIC,AICc) -> dat
 
 stopifnot(
   "wrong number of models"=dat |> select(model,bp,lag) |> distinct() |> nrow()==120,
