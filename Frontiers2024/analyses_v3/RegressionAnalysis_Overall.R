@@ -3,13 +3,7 @@
 #Load required packages
 library(tidyverse)
 library(pomp)
-library(foreach)
-library(iterators)
-library(doFuture)
 library(aakmisc)
-
-#Set up for parallelisation 
-plan(multisession) #for faster results, use multicore outside of RStudio
 
 #Set seed (important because random sampling occurs below)
 seed_choice <- 851657743
@@ -194,10 +188,12 @@ for (r in 1:rep_num){
   } #end loop over lags
 
   joint_AIC_df$rep <- r
+  joint_AIC_df <- joint_AIC_df |>
+    mutate(AICc = AIC_sub+2*p_sub*(p_sub+1)/(n_sub-p_sub-1))
   
   ##Extract breakpoints from best model (lowest AIC)
   joint_AIC_df |>
-    filter(AIC_sub==min(AIC_sub)) -> best
+    filter(AICc==min(AICc)) -> best
   
   ##Obtain data frame with above breakpoints specified
   joint_mouse_df |>
@@ -233,7 +229,7 @@ for (r in 1:rep_num){
   coefs <- chosen_model$coefficients
   
   pred <- model.matrix(chosen_model) %*% coefs |> as.data.frame() |> select(pred=V1)
-  df <- rcbind(df,pred)
+  df <- cbind(df,pred)
   df$rep <- r
   df$b <- best$`01`
   df$model <- best$model
@@ -248,3 +244,11 @@ for (r in 1:rep_num){
 
 write.csv(stats_df,"results_regression_stats.csv",row.names=FALSE)
 write.csv(preds_df,"results_regression_preds.csv",row.names=FALSE)
+
+#df |>
+  #ggplot()+
+  #geom_line(aes(x=lagRBC,y=pred,group=interaction(phase,box),col=phase))
+
+#df |>
+  #ggplot()+
+  #geom_text(aes(x=lagRBC,y=R,label=time,group=interaction(phase,mouse,box),col=phase))
