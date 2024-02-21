@@ -1,83 +1,59 @@
-#SET DIRECTORY TO SOURCE FILE LOCATION
-
 library(tidyverse)
-library(stringi)
-library(doParallel)
+library(mgcv)
 library(pomp)
-library(panelPomp)
-library(ggpubr)
-library(scales)
+library(foreach)
+library(iterators)
+library(doFuture)
 library(aakmisc)
-library(gridExtra)
+library(egg)
+library(ggpubr)
 library(cowplot)
 
-cbPalette <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+#### Data preparation ####
+stats_df <- read.csv("results_regression_stats.csv") |>
+  mutate(AIC=AIC_sub,
+         AICc=AIC+2*p_sub*(p_sub+1)/(n_sub-p_sub-1),
+         bp=X01) |>
+  group_by(rep) |>
+  filter(AICc==min(AICc)) |>
+  ungroup() |> 
+  select(model,lag,bp,loglik_sub,rep,AICc)
+stats_df$bp[is.na(stats_df$bp)] <- "None"
 
-source("POMP_GroupLevel_DataPrep.R")
+stats_df$model <- factor(stats_df$model,levels=c("m1","m2","m3","m4","m5","m6"),
+                         labels=c("Model A","Model B","Model C","Model D","Model E","Model F"))
+stats_df$bp <- factor(stats_df$bp,levels=c(8,9,10,11,"None"),labels=c("Day 8","Day 9","Day 10","Day 11","No breakpoint"))
+stats_df$lag <- factor(stats_df$lag,levels=c(1,2,3,4),labels=c("1-day","2-day","3-day","4-day"))
 
-flow |> 
-  select(time=day,box,pABA,E=Eryth,R=Retic,pABA,mouseid) |>
-  mutate(RBC=E+R,
-         lagRBC=lag(RBC,1),
-         lag="i = 1") |>
-  na.omit() |>
-  filter(time<=20,box!="05",mouseid!="01-02",mouseid!="02-03") -> data1
+lik_df <- stats_df
+lik_df$bp <- factor(lik_df$bp,levels=levels(lik_df$bp),
+                    labels=c("Day 8","Day 9","Day 10","Day 11","None"))
+lik_df$bp[is.na(lik_df$bp)] <- "None"
 
-flow |> 
-  select(time=day,box,pABA,E=Eryth,R=Retic,pABA,mouseid) |>
-  mutate(RBC=E+R,
-         lagRBC=lag(RBC,2),
-         lag="i = 2") |>
-  na.omit() |>
-  filter(time<=20,box!="05",mouseid!="01-02",mouseid!="02-03") -> data2
+lik_df <- lik_df |>
+  unite("label",c(model,bp,lag),sep=", ",remove=FALSE)
 
-flow |> 
-  select(time=day,box,pABA,E=Eryth,R=Retic,pABA,mouseid) |>
-  mutate(RBC=E+R,
-         lagRBC=lag(RBC,3),
-         lag="i = 3") |>
-  na.omit() |>
-  filter(time<=20,box!="05",mouseid!="01-02",mouseid!="02-03") -> data3
+label_df <- lik_df |>
+  group_by(label) |>
+  summarize(n=n()) |>
+  arrange(n) |>
+  select(label)
 
-flow |> 
-  select(time=day,box,pABA,E=Eryth,R=Retic,pABA,mouseid) |>
-  mutate(RBC=E+R,
-         lagRBC=lag(RBC,4),
-         lag="i = 4") |>
-  na.omit() |>
-  filter(time<=20,box!="05",mouseid!="01-02",mouseid!="02-03") -> data4
+lik_df$label <- factor(lik_df$label,levels=label_df$label)
 
-data <- data1 |> bind_rows(data2) |> bind_rows(data3) |> bind_rows(data4)
+lik_mean <- lik_df |>
+  group_by(label) |>
+  summarise(mean=mean(loglik_sub))
 
-labels <- data.frame(lag=c("i = 1","i = 2","i = 3","i = 4"),
-                     label=c("A","B","C","D"))
-
-data |>
+lik_df |>
   ggplot()+
-  geom_path(aes(x=lagRBC,y=R,col=pABA),linewidth=1)+
-  geom_text(aes(x=lagRBC,y=R,label=time),size=5)+
-  geom_text(data=labels,aes(x=9750000,y=4500000,label=label),size=5,fontface='bold')+
-  scale_x_continuous(labels=aakmisc::scinot)+
-  scale_y_continuous(labels=aakmisc::scinot)+
-  scale_colour_manual(values=cbPalette[2:5])+
-  labs(x=expression(paste("RBC density at time ", italic("t"), "-i (density per µL)")),
-       y=expression(paste("Reticulocyte supply at time ", italic("t"), " (density per µL)"))
-  )+
-  facet_wrap(lag~.,nrow=2)+
-  labs(colour="Parasite nutrient (pABA)")+
+  geom_boxplot(aes(x=label,y=loglik_sub))+
+  geom_jitter(aes(x=label,y=loglik_sub),size=2,alpha=0.2)+
+  labs(x="Overall model, in order of increasing frequency among selected models",y="Log likelihood")+
   theme_bw()+
   theme(
-    axis.title=element_text(size=15),
-    axis.title.y=element_text(size=15,colour="black"),
-    axis.text=element_text(size=11),
-    panel.grid=element_blank(),
-    legend.position="top",
-    legend.title=element_text(size=12),
-    legend.text=element_text(size=11),
-    strip.background=element_blank(),
-    strip.text=element_text(size=13),
-    plot.title=element_text(size=17,hjust=0.5)
-    
+    axis.text=element_text(angle=90),
+    axis.title=element_text(size=15)
   )
 
-ggsave("FigureS5.jpeg",width=40,height=14,units="cm")
+ggsave("FigureS4.jpeg",width=25,height=15,units="cm")
