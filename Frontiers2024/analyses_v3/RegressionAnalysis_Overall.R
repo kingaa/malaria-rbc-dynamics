@@ -29,6 +29,8 @@ sm1 |>
   select(rep,mouse,mouseid,box,time,E,R,RBC,lik) |>
   unite("key",c(rep,box,mouse),sep="_",remove=FALSE) -> sm1_mod
 
+#Create RBC increment vector to use for prediction
+
 ##Create data frame with breakpoints for each of the four pABA boxes
 box_list <- unique(sm1_mod$box)
 breakpoint_grid <- as_tibble(
@@ -46,6 +48,7 @@ rep_num <- 1000
 
 stats_df <- data.frame()
 preds_df <- data.frame()
+man_preds_df <- data.frame()
 
 for (r in 1:rep_num){
   
@@ -81,7 +84,9 @@ for (r in 1:rep_num){
   for (lag in lag_list){
 
     df <- joint_mouse_df |>
+      group_by(mouseid) |>
       mutate(lagRBC=lag(RBC,lag)) |>
+      ungroup () |>
       na.omit()
     
     df_sub <- df |> filter(time>max(lag_list)-1)
@@ -197,12 +202,11 @@ for (r in 1:rep_num){
   
   ##Obtain data frame with above breakpoints specified
   joint_mouse_df |>
-    mutate(
-      lagRBC=lag(RBC,best$lag),
-    ) |>
+    group_by(mouseid) |>
+    mutate(lagRBC=lag(RBC,best$lag)) |>
+    ungroup () |>
     na.omit() |>
     mutate(phase=as.factor(if_else(time<=as.integer(unlist(best)[box]),1,2))) -> df
-  
   
   ##Extract best model based on lowest AIC
   if (is.na(best$`01`)){
@@ -228,8 +232,72 @@ for (r in 1:rep_num){
   chosen_model <- models[[best$model]]
   coefs <- chosen_model$coefficients
   
+  #Make manual prediction dataframe
+  if (is.na(best$`01`)){
+    
+    man_data <- data.frame()
+    for (mouseChoice in unique(df$mouseid)){
+    
+      df_sub <- filter(df,mouseid==mouseChoice)
+      
+      range_phase <- range(df_sub$lagRBC) |> signif(2)
+      
+      man_data_tmp <- seq(range_phase[1],range_phase[2],100000) |>
+        as.data.frame() |>
+        setNames("lagRBC")
+      
+      man_data_tmp$box <- df_sub$box |> unique()
+      man_data_tmp$mouse <- df_sub$mouse |> unique()
+      man_data_tmp$phase <- NA
+      
+      man_data <- bind_rows(man_data,man_data_tmp) 
+        
+    } #end loop over mouseid
+    
+    man_pred <- predict(chosen_model,newdata=man_data,se.fit=FALSE) |> 
+      as.data.frame() |>
+      setNames("pred")
+    man_pred <- bind_cols(man_data,man_pred)
+    
+  } else {
+    
+    man_data <- data.frame()
+    for (mouseChoice in unique(df$mouseid)){
+      for (phaseChoice in unique(df$phase)){
+        
+        df_sub <- filter(df,mouseid==mouseChoice,phase==phaseChoice)
+        
+        #If statement deals with mouse that dies after day 8 and therefore doesn't have phase 2
+        if (nrow(df_sub)>0){
+          
+          range_phase <- range(df_sub$lagRBC) |> signif(2)
+          
+          man_data_tmp <- seq(range_phase[1],range_phase[2],100000) |>
+            as.data.frame() |>
+            setNames("lagRBC")
+          
+          man_data_tmp$box <- df_sub$box |> unique()
+          man_data_tmp$mouse <- df_sub$mouse |> unique()
+          man_data_tmp$phase <- phaseChoice
+          
+          man_data <- bind_rows(man_data,man_data_tmp)
+          
+        } #end if statement for mouse that dies early
+        
+      } #end loop over phase
+    } #end loop over mouseid
+    
+    man_pred <- predict(chosen_model,newdata=man_data,se.fit=FALSE) |> 
+      as.data.frame() |>
+      setNames("pred")
+    man_pred <- bind_cols(man_data,man_pred) 
+  
+  } #end if/else statement
+
+  #Obtain predictions from model matrix and coefficients
   pred <- model.matrix(chosen_model) %*% coefs |> as.data.frame() |> select(pred=V1)
   df <- cbind(df,pred)
+  #Store additional information for given replicate
   df$rep <- r
   df$b <- best$`01`
   df$model <- best$model
@@ -237,18 +305,19 @@ for (r in 1:rep_num){
   df$loglik_total <- best$loglik_total
   df$loglik_sub <- best$loglik_sub
   
+  man_pred$rep <- r
+  man_pred$b <- best$`01`
+  man_pred$model <- best$model
+  man_pred$lag <- best$lag
+  man_pred$loglik_total <- best$loglik_total
+  man_pred$loglik_sub <- best$loglik_sub
+  
   stats_df <- bind_rows(stats_df,joint_AIC_df)
   preds_df <- bind_rows(preds_df,df)
+  man_preds_df <- bind_rows(man_preds_df,man_pred)
     
 } #end for loop over iterations
 
-write.csv(stats_df,"results_regression_stats.csv",row.names=FALSE)
-write.csv(preds_df,"results_regression_preds.csv",row.names=FALSE)
-
-#df |>
-  #ggplot()+
-  #geom_line(aes(x=lagRBC,y=pred,group=interaction(phase,box),col=phase))
-
-#df |>
-  #ggplot()+
-  #geom_text(aes(x=lagRBC,y=R,label=time,group=interaction(phase,mouse,box),col=phase))
+write.csv(stats_df,"results_regression_stats_corr.csv",row.names=FALSE)
+write.csv(preds_df,"results_regression_preds_corr.csv",row.names=FALSE)
+write.csv(man_preds_df,"results_regression_man_preds_corr.csv",row.names=FALSE)
