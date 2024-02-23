@@ -3,21 +3,14 @@
 library(tidyverse)
 library(pomp)
 library(aakmisc)
+library(doFuture)
+plan(multisession,workers=10)
 
 lag_list <- 1:5
-rep_num <- 20
+rep_num <- 200
 
-##Create data frame with breakpoints for each of the four pABA boxes
-breakpoint_grid <- as_tibble(
-  matrix(
-    data=rep(c(NA,8,9,10,11),each=4),
-    ncol=4,byrow=TRUE,
-    dimnames=list(NULL,unique(sm1_mod$box))
-  )
-)
 ##Load in smooth distribution samples from PNAS work
-sm1name <- "m5sm1_mod.rds"
-sm1 <- readRDS(sm1name)
+sm1 <- readRDS("m5sm1_mod.rds")
 
 ##Create sm1_mod tibble, with columns rep, mouse, mousid, box, time, E, R, lik and key
 ##From sm1_mod, we will be sampling individual distribution samples
@@ -35,19 +28,28 @@ sm1 |>
   select(rep,mouse,mouseid,box,time,E,R,RBC,lik) |>
   unite("key",c(rep,box,mouse),sep="_",remove=FALSE) -> sm1_mod
 
+##Create data frame with breakpoints for each of the four pABA boxes
+breakpoint_grid <- as_tibble(
+  matrix(
+    data=rep(c(NA,8,9,10,11),each=4),
+    ncol=4,byrow=TRUE,
+    dimnames=list(NULL,unique(sm1_mod$box))
+  )
+)
+
 expand_grid(
-  lg=lag_list,
-  bp=c(NA,8,9,10,11),
+  lgg=lag_list,
+  brp=c(NA,8,9,10,11),
   sm1_mod
 ) |>
-  group_by(lg,mouseid) |>
+  group_by(lgg,mouseid) |>
   mutate(
-    lagRBC=lag(RBC,n=unique(lg)),
-    phase=factor(if_else(time<=bp,1,2))
+    lagRBC=lag(RBC,n=unique(lgg)),
+    phase=factor(if_else(time<=brp,1,2))
   ) |>
   ungroup() |>
   filter(!is.na(lagRBC)) |>
-  group_by(lag=lg,bp,box,phase) |>
+  group_by(lgg,brp,box,phase) |>
   summarize(
     lo=quantile(lagRBC,probs=0.05),
     hi=quantile(lagRBC,probs=0.95)
@@ -68,13 +70,13 @@ loglik <- function (model) {
   loglik_manual
 }
 
-stats_df <- list()
-preds_df <- list()
-
-
-for (r in seq_len(rep_num)) {
+foreach (
+  r=seq_len(rep_num),
+  .options.future = list(seed = TRUE)
+) %dofuture% {
   
-  print(r)
+  stats_df <- list()
+  preds_df <- list()
   
   lapply(
     mouse_id_list,
@@ -85,8 +87,6 @@ for (r in seq_len(rep_num)) {
     }
   ) |>
     bind_rows() -> joint_mouse_df
-  
-  joint_AIC_df <- list()
   
   for (lag in lag_list) {
     
@@ -161,6 +161,7 @@ for (r in seq_len(rep_num)) {
             \(m) tibble(
               bp,
               lag,
+              rep=r,
               loglik=loglik(m),
               coef=length(m$coefficients)+1,
               n=nrow(dat),
@@ -173,6 +174,7 @@ for (r in seq_len(rep_num)) {
             \(m) tibble(
               bp,
               lag,
+              rep=r,
               loglik=loglik(m),
               coef=length(m$coefficients)+1,
               n=nrow(dat_sub),
@@ -187,87 +189,72 @@ for (r in seq_len(rep_num)) {
           AICc=AIC+2*p*(p+1)/(n-p-1)
         ) -> model_df
       
-      joint_AIC_df <- c(joint_AIC_df,list(model_df))
+      stats_df <- c(stats_df,list(model_df))
+      
+      ranges |>
+        filter(
+          lgg==lag,
+          brp==bp[["01"]] |
+            (is.na(bp[["01"]]) & is.na(brp))
+        ) |>
+        group_by(lag=lgg,bp=brp,box,phase) |>
+        reframe(
+          rep=r,
+          lagRBC=seq(from=lo,to=hi,length=100)
+        ) |>
+        ungroup() -> grid
+      
+      models |>
+        lapply(
+          \(m) bind_cols(grid,pred=predict(m,newdata=grid))
+        ) |>
+        bind_rows(.id="model") -> grid
+      
+      preds_df <- c(preds_df,list(grid))
+      
     } #end loop over breakpoints
   } #end loop over lags
   
-  joint_AIC_df |>
-    bind_rows() -> joint_AIC_df
-  
-  stats_df <- c(stats_df,list(joint_AIC_df))
-  
-  ##Extract breakpoints from best model (lowest AIC)
-  joint_AIC_df |>
-    filter(dataset=="sub") |>
-    filter(AICc==min(AICc)) -> best
-  
-  stopifnot(
-    "unequal breakpoints"=length(unique(unlist(best[c("01","02","03","04")])))==1
+  list(
+    rep=r,
+    stats=bind_rows(stats_df),
+    preds=bind_rows(preds_df)
   )
-  
-  ##Obtain data frame with above breakpoints specified
-  joint_mouse_df |>
-    group_by(mouseid) |>
-    mutate(lagRBC=lag(RBC,best$lag)) |>
-    ungroup () |>
-    na.omit() |>
-    mutate(
-      phase=factor(if_else(time<=as.integer(unlist(best)[box]),1,2))
-    ) -> df
-  
-  ##Extract best model based on lowest AIC
-  if (is.na(best$`01`)) {
-    models <- list(
-      m1=lm(R~poly(lagRBC,2,raw=F):(box-1)+(box-1),data=df),
-      m2=lm(R~(poly(lagRBC,2,raw=F)+box-1),data=df),
-      m3=lm(R~poly(lagRBC,2,raw=F),data=df),
-      m4=lm(R~lagRBC:(box-1)+(box-1),data=df),
-      m5=lm(R~(lagRBC+box-1),data=df),
-      m6=lm(R~lagRBC,data=df)
-    )
-  } else {
-    models <- list(
-      m1=lm(R~poly(lagRBC,2,raw=F):(box-1):(phase-1)+(box-1):(phase-1),data=df),
-      m2=lm(R~(poly(lagRBC,2,raw=F)+box-1):(phase-1)+(phase-1),data=df),
-      m3=lm(R~poly(lagRBC,2,raw=F):(phase-1)+(phase-1),data=df),
-      m4=lm(R~lagRBC:(box-1):(phase-1)+(box-1):(phase-1),data=df),
-      m5=lm(R~(lagRBC+box-1):(phase-1)+(phase-1),data=df),
-      m6=lm(R~lagRBC:(phase-1)+(phase-1),data=df)
-    )
-  }
-  
-  print(best)
-  
-  chosen_model <- models[[best$model]]
-  coefs <- chosen_model$coefficients
-  
-  ranges |>
-    filter(
-      lag==best$lag,
-      bp==best[["01"]] | 
-        (is.na(best[["01"]]) & is.na(bp))
-    ) |>
-    group_by(lag,bp,box,phase) |>
-    reframe(
-      model=best$model,
-      lagRBC=seq(from=lo,to=hi,length=1000)
-    ) |>
-    ungroup() -> grid
-  
-  grid |>
-    bind_cols(pred=predict(chosen_model,newdata=grid)) -> grid
-  
-  preds_df <- c(preds_df,list(grid))
- 
-} #end for loop over iterations
+} -> res
 
-stats_df |> bind_rows(.id="rep") -> stats_df
-preds_df |> bind_rows(.id="rep") -> preds_df
+res |>
+  lapply(\(x) getElement(x,"stats")) |>
+  bind_rows() -> stats_df
+res |>
+  lapply(\(x) getElement(x,"preds")) |>
+  bind_rows() -> preds_df
+
+stats_df |>
+  filter(dataset=="sub") |>
+  group_by(rep) |>
+  filter(AICc==min(AICc)) |>
+  ungroup() -> best
+
+best |> count(model)
+best |> count(lag)
 
 preds_df |>
-  ggplot(aes(x=lagRBC,y=pred,group=interaction(phase,box),color=box))+
-  geom_line()+
-  facet_wrap(~model+lag,labeller=label_both)
+  group_by(model,lag,bp,box,phase,lagRBC) |>
+  reframe(p=c(0.1,0.5,0.9),q=quantile(pred,probs=p),label=c("lo","med","hi")) |>
+  ungroup() |>
+  pivot_wider(id_cols=c(model,lag,bp,box,phase,lagRBC),names_from=label,values_from=q) -> quants_df
 
-write.csv(stats_df,"results_regression_stats_corr.csv",row.names=FALSE)
-write.csv(preds_df,"results_regression_preds_corr.csv",row.names=FALSE)
+stats_df |> write_csv("results_regression_stats.csv")
+## preds_df |> write_csv("results_regression_preds.csv")
+quants_df |> write_csv("results_regression_quants.csv")
+
+quants_df |>
+  mutate(
+    phase=coalesce(phase,factor(1)),
+    bp=coalesce(as.character(bp),"none")
+  ) |>
+  filter(model=="m2",lag %in% c(2,3),bp %in% c("none",9,10)) |>
+  ggplot(aes(x=lagRBC,y=med,ymin=lo,ymax=hi,group=interaction(phase,box),color=box,fill=box))+
+  geom_line()+
+  geom_ribbon(alpha=0.3)+
+  facet_wrap(~model+lag+bp,labeller=label_both)
