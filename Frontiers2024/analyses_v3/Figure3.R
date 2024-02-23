@@ -52,10 +52,19 @@ df4 <- group_traj |>
   filter(time>0,time<=20) |>
   mutate(lag="i = 4")
 
-df <- df1 |> bind_rows(df2) |> bind_rows(df3) |> bind_rows(df4)
+df5 <- group_traj |>
+  filter(box!="05",variable%in%c("E","R")) |>
+  select(-lo,-hi) |>
+  pivot_wider(names_from="variable",values_from="med") |>
+  mutate(RBC = E+R,
+         lagRBC=lag(RBC,5)) |>
+  filter(time>0,time<=20) |>
+  mutate(lag="i = 5")
 
-labels <- data.frame(lag=c("i = 1","i = 2","i = 3","i = 4"),
-                 label=c("A","B","C","D"))
+df <- df1 |> bind_rows(df2) |> bind_rows(df3) |> bind_rows(df4) |> bind_rows(df5)
+
+labels <- data.frame(lag=c("i = 1","i = 2","i = 3","i = 4","i = 5"),
+                 label=c("A","B","C","D","E"))
 
 facet_plot <- df |>
   ggplot()+
@@ -76,9 +85,10 @@ facet_plot <- df |>
     axis.title.y=element_text(size=15,colour="black"),
     axis.text=element_text(size=11),
     panel.grid=element_blank(),
-    legend.position="none",
+    legend.position=c(0.825,0.2),
     legend.title=element_text(size=15),
     legend.text=element_text(size=13),
+    legend.background=element_blank(),
     strip.background=element_blank(),
     strip.text=element_text(size=13),
     plot.title=element_text(size=17,hjust=0.5)
@@ -86,4 +96,4 @@ facet_plot <- df |>
   )
 facet_plot
 
-ggsave("Figure3.jpeg",width=20,height=20,units="cm")
+ggsave("Figure3.jpeg",width=30,height=20,units="cm")
