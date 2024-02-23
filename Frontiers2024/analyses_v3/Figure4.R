@@ -13,24 +13,27 @@ library(cowplot)
 cbPalette <- c("#332288","#117733","#88CCEE","#DDCC77","#CC6677","#882255")
 
 #### Data preparation ####
-stats_df <- read.csv("results_regression_stats_corr.csv") |>
-  mutate(AIC=AIC_sub,
-         AICc=AIC+2*p_sub*(p_sub+1)/(n_sub-p_sub-1),
-         bp=X01) |>
+stats_df <- read.csv("results_regression_stats.csv") |>
+  filter(dataset=="sub") |>
   group_by(rep) |>
   filter(AICc==min(AICc)) |>
-  ungroup() |> 
-  select(model,lag,bp,loglik_sub,rep,AICc)
+  ungroup() |>
+  mutate(bp = X01) |>
+  select(-c(X01:X04))
 stats_df$bp[is.na(stats_df$bp)] <- "None"
 
 stats_df$model <- factor(stats_df$model,levels=c("m1","m2","m3","m4","m5","m6"),
                          labels=c("Model A","Model B","Model C","Model D","Model E","Model F"))
 stats_df$bp <- factor(stats_df$bp,levels=c(8,9,10,11,"None"),labels=c("Day 8","Day 9","Day 10","Day 11","No breakpoint"))
-stats_df$lag <- factor(stats_df$lag,levels=c(1,2,3,4),labels=c("1-day","2-day","3-day","4-day"))
+stats_df$lag <- factor(stats_df$lag,levels=c(1,2,3,4,5),labels=c("1-day","2-day","3-day","4-day","5-day"))
+
+stats_df |> count(model) |> mutate(percent = 100* n/nrow(best))
+stats_df |> count(lag) |> mutate(percent = 100* n/nrow(best))
+stats_df |> count(bp) |> mutate(percent = 100* n/nrow(best))
 
 #### Lag stacked barplot ####
 stats_lag <- stats_df |> select(lag) |> group_by(lag) |> count()
-stats_lag_tmp <- data.frame("1-day",0) |> setNames(c("lag","n"))
+stats_lag_tmp <- data.frame(c("1-day","5-day"),c(0,0)) |> setNames(c("lag","n"))
 stats_lag <- bind_rows(stats_lag_tmp,stats_lag)
 
 lag_bar <- stats_lag |>
@@ -101,21 +104,6 @@ bp_bar
 
 #### Top model bar plots ####
 #### Data preparation ####
-stats_df <- read.csv("results_regression_stats_corr.csv") |>
-  mutate(AIC=AIC_sub,
-         AICc=AIC+2*p_sub*(p_sub+1)/(n_sub-p_sub-1),
-         bp=X01) |>
-  group_by(rep) |>
-  filter(AICc==min(AICc)) |>
-  ungroup() |> 
-  select(model,lag,bp,loglik_sub,rep,AICc)
-stats_df$bp[is.na(stats_df$bp)] <- "None"
-
-stats_df$model <- factor(stats_df$model,levels=c("m1","m2","m3","m4","m5","m6"),
-                         labels=c("Model A","Model B","Model C","Model D","Model E","Model F"))
-stats_df$bp <- factor(stats_df$bp,levels=c(8,9,10,11,"None"),labels=c("Day 8","Day 9","Day 10","Day 11","No breakpoint"))
-stats_df$lag <- factor(stats_df$lag,levels=c(1,2,3,4),labels=c("1-day","2-day","3-day","4-day"))
-
 stats_df |> 
   group_by(model) |> 
   count() |>
@@ -129,7 +117,7 @@ top_df <- stats_df |>
   mutate(freq=n/sum(n)) |>
   filter(model=="Model B"|model=="Model E")
 top_df$model <- factor(top_df$model,levels=c("Model B","Model E"),
-                       labels=c("Model B (58.6%)","Model E (31.0%)"))
+                       labels=c("Model B (54.9%)","Model E (31.1%)"))
 plot <- top_df |>
   ggplot(aes(x=lag,y=freq*100,fill=bp))+
   geom_bar(stat="identity")+
