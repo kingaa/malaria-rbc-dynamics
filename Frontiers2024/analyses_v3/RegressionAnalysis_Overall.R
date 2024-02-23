@@ -7,7 +7,7 @@ library(doFuture)
 plan(multisession,workers=10)
 
 lag_list <- 1:5
-rep_num <- 200
+rep_num <- 1000
 
 ##Load in smooth distribution samples from PNAS work
 sm1 <- readRDS("m5sm1_mod.rds")
@@ -57,7 +57,7 @@ expand_grid(
   ungroup() -> ranges
 
 #Set seed (important because random sampling occurs below)
-seed_choice <- 851657743
+seed_choice <- 313989677
 set.seed(seed_choice)
 
 mouse_id_list <- unique(sm1_mod$mouseid)
@@ -253,7 +253,11 @@ quants_df |>
     phase=coalesce(phase,factor(1)),
     bp=coalesce(as.character(bp),"none")
   ) |>
-  filter(model=="m2",lag %in% c(2,3),bp %in% c("none",9,10)) |>
+  filter(
+    model %in% c("m2","m5"),
+    lag %in% c(2,3),
+    bp %in% c("none",9,10)
+  ) |>
   ggplot(aes(x=lagRBC,y=med,ymin=lo,ymax=hi,group=interaction(phase,box),color=box,fill=box))+
   geom_line()+
   geom_ribbon(alpha=0.3)+
