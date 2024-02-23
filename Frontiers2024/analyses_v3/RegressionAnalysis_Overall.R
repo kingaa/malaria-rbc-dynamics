@@ -3,11 +3,12 @@
 library(tidyverse)
 library(pomp)
 library(aakmisc)
+library(foreach)
 library(doFuture)
-plan(multisession,workers=10)
+plan(multisession,workers=3)
 
 lag_list <- 1:5
-rep_num <- 200
+rep_num <- 1000
 
 ##Load in smooth distribution samples from PNAS work
 sm1 <- readRDS("m5sm1_mod.rds")
@@ -229,15 +230,6 @@ res |>
   lapply(\(x) getElement(x,"preds")) |>
   bind_rows() -> preds_df
 
-stats_df |>
-  filter(dataset=="sub") |>
-  group_by(rep) |>
-  filter(AICc==min(AICc)) |>
-  ungroup() -> best
-
-best |> count(model)
-best |> count(lag)
-
 preds_df |>
   group_by(model,lag,bp,box,phase,lagRBC) |>
   reframe(p=c(0.1,0.5,0.9),q=quantile(pred,probs=p),label=c("lo","med","hi")) |>
@@ -247,14 +239,3 @@ preds_df |>
 stats_df |> write_csv("results_regression_stats.csv")
 ## preds_df |> write_csv("results_regression_preds.csv")
 quants_df |> write_csv("results_regression_quants.csv")
-
-quants_df |>
-  mutate(
-    phase=coalesce(phase,factor(1)),
-    bp=coalesce(as.character(bp),"none")
-  ) |>
-  filter(model=="m2",lag %in% c(2,3),bp %in% c("none",9,10)) |>
-  ggplot(aes(x=lagRBC,y=med,ymin=lo,ymax=hi,group=interaction(phase,box),color=box,fill=box))+
-  geom_line()+
-  geom_ribbon(alpha=0.3)+
-  facet_wrap(~model+lag+bp,labeller=label_both)

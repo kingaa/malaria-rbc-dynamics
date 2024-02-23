@@ -13,7 +13,7 @@ library(cowplot)
 cbPalette <- c("#332288","#117733","#88CCEE","#DDCC77","#CC6677","#882255")
 
 #### Data preparation ####
-stats_df <- read.csv("results_regression_stats.csv") |>
+stats_df <- read.csv("results_regression_stats_corr.csv") |>
   mutate(AIC=AIC_sub,
          AICc=AIC+2*p_sub*(p_sub+1)/(n_sub-p_sub-1),
          bp=X01) |>
@@ -101,7 +101,7 @@ bp_bar
 
 #### Top model bar plots ####
 #### Data preparation ####
-stats_df <- read.csv("results_regression_stats.csv") |>
+stats_df <- read.csv("results_regression_stats_corr.csv") |>
   mutate(AIC=AIC_sub,
          AICc=AIC+2*p_sub*(p_sub+1)/(n_sub-p_sub-1),
          bp=X01) |>
