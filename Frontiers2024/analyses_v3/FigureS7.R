@@ -17,7 +17,7 @@ source("POMP_GroupLevel_DataPrep.R")
 
 flow |> 
   filter(day<=20,box!="05",mouseid!="01-02",mouseid!="02-03") |>
-  select(time=day,R=Retic,RBC,box,mouse,pABA) -> data
+  select(time=day,R=Retic,RBC,box,mouse,pABA,mouseid) -> data
 
 
 box_list <- unique(data$box)
@@ -29,7 +29,7 @@ breakpoint_grid <- as_tibble(
   )
 )
 
-lag_list <- 1:4
+lag_list <- 1:5
 
 #Create function to calculate log likelihood of model
 loglik <- function(model){
@@ -44,6 +44,7 @@ joint_AIC_df <- data.frame()
 for (lag in lag_list){
   
   df <- data |>
+    group_by(mouseid) |>
     mutate(lagRBC=lag(RBC,lag)) |>
     na.omit()
   
@@ -158,6 +159,7 @@ joint_AIC_df |>
 
 ##Obtain data frame with above breakpoints specified
 data |>
+  group_by(mouseid) |>
   mutate(
     lagRBC=lag(RBC,best$lag),
   ) |>
@@ -204,11 +206,11 @@ df |>
   scale_y_continuous(labels = aakmisc::scinot,limits=c(0,4500000))+
   annotate("text",x=7000000,y=3200000,label="Phase 2",size=5)+
   annotate("text",x=6000000,y=550000,label="Phase 1",size=5)+
-  geom_segment(aes(x=6000000,xend=6000000,y=750000,yend=600000))+
+  geom_segment(aes(x=6000000,xend=6000000,y=1100000,yend=600000))+
   geom_segment(aes(x=7000000,xend=5900000,y=3000000,yend=2500000))+
   xlab("")+ylab("Reticulocyte supply (t)")+
   scale_colour_manual(values=cbpABA[2:5])+
-  geom_label(aes(x=9000000,y=4000000,label="Model B\nBreakpoint 10\nLag = 3 days"))+
+  geom_label(aes(x=9000000,y=4000000,label="Model E\nBreakpoint 10\nLag = 3 days"))+
   theme_bw()+
   guides(colour = guide_legend(override.aes = list(alpha = 1)))+
   labs(x=expression(paste("RBC density at time ", italic("t"), "-3 (density per µL)")),
@@ -230,4 +232,4 @@ df |>
     #panel.border = element_rect(linewidth=4)
     
   )
-ggsave("FigureS6.jpeg",width=15,height=15,units="cm")
+ggsave("FigureS7.jpeg",width=15,height=15,units="cm")

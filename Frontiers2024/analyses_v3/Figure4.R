@@ -62,7 +62,7 @@ stats_model <- stats_df |> select(model) |> group_by(model) |> count()
 model_bar <- stats_model |>
   ggplot()+
   geom_bar(aes(fill=factor(model),y=n/10,x=1),stat="identity")+
-  labs(x="",y="Percent of models selected",fill=NULL)+
+  labs(x="",y="",fill=NULL)+
   scale_fill_manual(values=cbPalette)+
   guides(fill = guide_legend(nrow = 2))+
   ggtitle("Model form")+
@@ -85,7 +85,7 @@ stats_bp <- stats_df |> select(bp) |> group_by(bp) |> count()
 bp_bar <- stats_bp |>
   ggplot()+
   geom_bar(aes(fill=factor(bp),y=n/10,x=1),stat="identity")+
-  labs(x="",y="",fill=NULL)+
+  labs(x="",y="Percent of models selected",fill=NULL)+
   scale_fill_manual(values=cbPalette)+
   guides(fill = guide_legend(nrow = 2))+
   ggtitle("Breakpoint")+
@@ -139,7 +139,7 @@ plot <- top_df |>
   )
 
 #### Join summary plots together ####
-gt <- arrangeGrob(model_bar,bp_bar,lag_bar,nrow=1)
+gt <- arrangeGrob(bp_bar,model_bar,lag_bar,nrow=1)
 
 gt2 <- arrangeGrob(gt,plot,nrow=2)
 

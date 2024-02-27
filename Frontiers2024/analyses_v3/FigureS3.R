@@ -13,19 +13,16 @@ library(cowplot)
 cbPalette <- c("#332288","#117733","#88CCEE","#DDCC77","#CC6677","#882255")
 
 #### Data preparation ####
-stats_df <- read.csv("results_regression_stats.csv") |>
-  mutate(AIC=AIC_sub,
-         AICc=AIC+2*p_sub*(p_sub+1)/(n_sub-p_sub-1),
-         bp=X01) |>
+stats_df <- read.csv("results_regression_stats.csv")|>
   group_by(rep) |>
   filter(AICc==min(AICc)) |>
   ungroup() |> 
-  select(model,lag,bp,loglik_sub,rep,AICc)
+  select(model,lag,bp=X01,loglik,rep,AICc)
 stats_df$bp[is.na(stats_df$bp)] <- "None"
 
 stats_df$model <- factor(stats_df$model,levels=c("m1","m2","m3","m4","m5","m6"),
                          labels=c("Model A","Model B","Model C","Model D","Model E","Model F"))
-stats_df$bp <- factor(stats_df$bp,levels=c(8,9,10,11,"None"),labels=c("Day 8","Day 9","Day 10","Day 11","No breakpoint"))
+stats_df$bp <- factor(stats_df$bp,levels=c(8,9,10,11,"None"),labels=c("Day 8","Day 9","Day 10","Day 11","None"))
 stats_df$lag <- factor(stats_df$lag,levels=c(1,2,3,4),labels=c("1-day","2-day","3-day","4-day"))
 
 overall_freq <- stats_df |> 

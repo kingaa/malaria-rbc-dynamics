@@ -460,32 +460,4 @@ top_pred_df |>
     legend.position="top",
     legend.background=element_blank()
   )
-
-top_pred_df |>
-  filter(facet_lab=="Sixteenth-best model (1.1%)") |>
-  ggplot(aes(x=lagRBC,y=pred))+
-  geom_line(aes(x=lagRBC,y=pred,group=interaction(rep, mouse,phase,pABA),col=pABA),alpha=1)+
-  #geom_label(data=top_pred_text,aes(x=7500000,y=4200000,label=text),size=3)+
-  #geom_text(data=top_pred_text,aes(x=300000,y=4550000,label=tag),fontface="bold",size=5)+
-  
-  #geom_text(data=phase_lab,aes(x=7000000,y=3000000,label=Phase2),size=3)+
-  #geom_text(data=phase_lab,aes(x=4000000,y=750000,label=Phase1),size=3)+
-  
-  scale_x_continuous(labels = aakmisc::scinot,limits=c(0,10000000))+
-  scale_y_continuous(labels = aakmisc::scinot,limits=c(0,4600000))+
-  #facet_wrap(facet_lab~.,nrow=4)+
-  scale_colour_manual(values=cbpABA[2:5])+
-  guides(colour = guide_legend(override.aes = list(alpha = 1)))+
-  labs(colour="Parasite nutrient (pABA)",x=expression(paste("RBC density at time ", italic("t"), "-i (density per µL)")),
-       y=expression(paste("Reticulocyte supply at time ", italic("t"), " (density per µL)")))+
-  theme_bw()+
-  theme(
-    strip.background=element_blank(),
-    strip.text=element_text(size=10),
-    axis.text=element_text(size=10),
-    axis.title=element_text(size=12),
-    legend.position="top",
-    legend.background=element_blank()
-  )
-
 ggsave("Figure5_4x4.jpeg",width=25,height=25,units="cm")

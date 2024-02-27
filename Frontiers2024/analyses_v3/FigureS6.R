@@ -47,10 +47,18 @@ flow |>
   na.omit() |>
   filter(time<=20,box!="05",mouseid!="01-02",mouseid!="02-03") -> data4
 
-data <- data1 |> bind_rows(data2) |> bind_rows(data3) |> bind_rows(data4)
+flow |> 
+  select(time=day,box,pABA,E=Eryth,R=Retic,pABA,mouseid) |>
+  mutate(RBC=E+R,
+         lagRBC=lag(RBC,5),
+         lag="i = 5") |>
+  na.omit() |>
+  filter(time<=20,box!="05",mouseid!="01-02",mouseid!="02-03") -> data5
 
-labels <- data.frame(lag=c("i = 1","i = 2","i = 3","i = 4"),
-                     label=c("A","B","C","D"))
+data <- data1 |> bind_rows(data2) |> bind_rows(data3) |> bind_rows(data4) |> bind_rows(data5)
+
+labels <- data.frame(lag=c("i = 1","i = 2","i = 3","i = 4","i = 5"),
+                     label=c("A","B","C","D","E"))
 
 data |>
   ggplot()+
@@ -71,7 +79,7 @@ data |>
     axis.title.y=element_text(size=15,colour="black"),
     axis.text=element_text(size=11),
     panel.grid=element_blank(),
-    legend.position="top",
+    legend.position=c(0.825,0.2),
     legend.title=element_text(size=12),
     legend.text=element_text(size=11),
     strip.background=element_blank(),
@@ -80,4 +88,4 @@ data |>
     
   )
 
-ggsave("FigureS6.jpeg",width=25,height=25,units="cm")
+ggsave("FigureS6.jpeg",width=30,height=20,units="cm")
