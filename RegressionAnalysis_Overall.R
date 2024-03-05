@@ -109,12 +109,12 @@ foreach (
         
         ##Models
         models <- list(
-          m1=lm(R~poly(lagRBC,2,raw=F):(box-1)+(box-1),data=dat),
-          m2=lm(R~(poly(lagRBC,2,raw=F)+box-1),data=dat),
-          m3=lm(R~poly(lagRBC,2,raw=F),data=dat),
-          m4=lm(R~lagRBC:(box-1)+(box-1),data=dat),
-          m5=lm(R~(lagRBC+box-1),data=dat),
-          m6=lm(R~lagRBC,data=dat)
+          m1=lm(R~poly(lagRBC,2,raw=F):(box-1)+(box-1),data=dat), #box with different shape and intercept
+          m2=lm(R~(poly(lagRBC,2,raw=F)+box-1),data=dat), #same shape, different intercept
+          m3=lm(R~poly(lagRBC,2,raw=F),data=dat), #no effect
+          m4=lm(R~lagRBC:(box-1)+(box-1),data=dat), #slope and intercept
+          m5=lm(R~(lagRBC+box-1),data=dat), #same slope, different intercept
+          m6=lm(R~lagRBC,data=dat) #no effect
         )
         
         models_sub <- list(
