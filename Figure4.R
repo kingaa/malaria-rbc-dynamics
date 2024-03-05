@@ -26,21 +26,35 @@ stats_df$model <- factor(stats_df$model,levels=c("m1","m2","m3","m4","m5","m6"),
                          labels=c("Model A","Model B","Model C","Model D","Model E","Model F"))
 stats_df$bp <- factor(stats_df$bp,levels=c(8,9,10,11,"None"),labels=c("Day 8","Day 9","Day 10","Day 11","No breakpoint"))
 stats_df$lag <- factor(stats_df$lag,levels=c(1,2,3,4,5),labels=c("1-day","2-day","3-day","4-day","5-day"))
+stats_df$pABA <- factor(stats_df$model,levels=c("Model A","Model B","Model C","Model D","Model E","Model F"),
+                        labels=c("Shape/slope and intercept","Intercept only","No effect",
+                                 "Shape/slope and intercept","Intercept only","No effect"))
 
-stats_df |> count(model) |> mutate(percent = 100* n/nrow(best))
-stats_df |> count(lag) |> mutate(percent = 100* n/nrow(best))
-stats_df |> count(bp) |> mutate(percent = 100* n/nrow(best))
+
+stats_df |> count(model) |> mutate(percent = 100* n/nrow(stats_df))
+stats_df |> count(lag) |> mutate(percent = 100* n/nrow(stats_df))
+stats_df |> count(bp) |> mutate(percent = 100* n/nrow(stats_df))
+stats_df |> count(pABA) |> mutate(percent = 100* n/nrow(stats_df))
 
 #### Lag stacked barplot ####
 stats_lag <- stats_df |> select(lag) |> group_by(lag) |> count()
 stats_lag_tmp <- data.frame(c("1-day","5-day"),c(0,0)) |> setNames(c("lag","n"))
 stats_lag <- bind_rows(stats_lag_tmp,stats_lag)
 
+lagPalette <- c("#ffffcc","#c2e699","#78c679","#31a354","#006837")
+
+plot_labs <- data.frame(
+  c("4-day","3-day","2-day"),
+  c(22.6,48,29.4)
+) |> setNames(c("lag","percent"))
+
 lag_bar <- stats_lag |>
   ggplot()+
   geom_bar(aes(fill=factor(lag),y=n/10,x=1),stat="identity")+
-  labs(x="",y="",fill=NULL)+
-  scale_fill_manual(values=cbPalette)+
+  #geom_text(data=plot_labs,
+            #aes(x=1,y=percent,label=lag),size=5,position=position_stack(vjust = 0.5))+
+  labs(x="",y="Percent of models selected",fill=NULL)+
+  scale_fill_manual(values=lagPalette)+
   guides(fill = guide_legend(nrow = 2))+
   ggtitle("Reticulocyte response lag")+
   theme_bw()+
@@ -61,10 +75,22 @@ stats_model <- stats_df |> select(model) |> group_by(model) |> count()
 
 model_bar <- stats_model |>
   ggplot()+
-  geom_bar(aes(fill=factor(model),y=n/10,x=1),stat="identity")+
+  #geom_point(data=legend_df,aes(col=type,y=percent,x=1))+
+  geom_bar(aes(fill=model,y=n/10,x=1),stat="identity")+
+  #geom_text(data=plot_labs,
+            #aes(x=1,y=percent,label=model),size=5,position=position_stack(vjust = 0.55))+
   labs(x="",y="",fill=NULL)+
-  scale_fill_manual(values=cbPalette)+
-  guides(fill = guide_legend(nrow = 2))+
+  scale_fill_manual(values = c("Model A"="#de2d26",
+                                "Model B"="#fb6a4a",
+                                "Model D"="#08519c",
+                                "Model C"="#fcae91",
+                                "Model E"="#3182bd",
+                                "Model F"="#6baed6"),
+                    name = "Non-linear\nLinear",
+                    breaks=c("Model A","Model D","Model B","Model E","Model C","Model F")) +
+  #scale_fill_manual(values = c("Non-linear" = "red", "Linear" = "blue"),
+   #                 name = "", labels = c("Non-linear","Linear"))+
+  guides(fill = guide_legend(ncol = 3))+
   ggtitle("Model form")+
   theme_bw()+
   theme(
@@ -75,18 +101,21 @@ model_bar <- stats_model |>
     axis.text=element_text(size=12),
     legend.position="bottom",
     panel.grid=element_blank(),
-    plot.title=element_text(size=16,hjust=0.5)
+    plot.title=element_text(size=16,hjust=0.5),
+    legend.title=element_text(size=12,lineheight=1.25,hjust=1)
   )
 model_bar
 
 #### Breakpoint stacked barplot ####
 stats_bp <- stats_df |> select(bp) |> group_by(bp) |> count()
 
+bpPalette <- c("#fed98e","#fe9929","#d95f0e","#993404","grey")
+
 bp_bar <- stats_bp |>
   ggplot()+
   geom_bar(aes(fill=factor(bp),y=n/10,x=1),stat="identity")+
   labs(x="",y="Percent of models selected",fill=NULL)+
-  scale_fill_manual(values=cbPalette)+
+  scale_fill_manual(values=bpPalette)+
   guides(fill = guide_legend(nrow = 2))+
   ggtitle("Breakpoint")+
   theme_bw()+
@@ -101,6 +130,31 @@ bp_bar <- stats_bp |>
     plot.title=element_text(size=16,hjust=0.5)
   )
 bp_bar
+
+#### pABA stacked barplot ####
+stats_pABA <- stats_df |> select(pABA) |> group_by(pABA) |> count()
+
+pABAPalette <- c("#cbc9e2","#9e9ac8","#756bb1")
+
+pABA_bar <- stats_pABA |>
+  ggplot()+
+  geom_bar(aes(fill=factor(pABA),y=n/10,x=1),stat="identity")+
+  labs(x="",y="",fill=NULL)+
+  scale_fill_manual(values=pABAPalette)+
+  guides(fill = guide_legend(nrow = 2))+
+  ggtitle("Effect of pABA")+
+  theme_bw()+
+  theme(
+    axis.text.x=element_blank(),
+    axis.ticks.x=element_blank(),
+    axis.title.x=element_blank(),
+    axis.title=element_text(size=15),
+    axis.text=element_text(size=12),
+    legend.position="bottom",
+    panel.grid=element_blank(),
+    plot.title=element_text(size=16,hjust=0.5)
+  )
+pABA_bar
 
 #### Top model bar plots ####
 #### Data preparation ####
@@ -139,13 +193,15 @@ plot <- top_df |>
   )
 
 #### Join summary plots together ####
-gt <- arrangeGrob(bp_bar,model_bar,lag_bar,nrow=1)
+gt <- arrangeGrob(bp_bar,model_bar,lag_bar,pABA_bar,nrow=2)
 
-gt2 <- arrangeGrob(gt,plot,nrow=2)
+
 
 # Add labels to the arranged plots
-p <- as_ggplot(gt2) +                                # transform to a ggplot
-  draw_plot_label(label = c("A", "B","C","D","E"), size = 15,
-                  x = c(0, 0.33,0.66,0.04,0.525), y = c(1, 1,1,0.5,0.5))
+p <- as_ggplot(gt) +                                # transform to a ggplot
+  draw_plot_label(label = c("A", "B","C","D"), size = 15,
+                  x = c(0.04, 0.525,0.04,0.525), y = c(1,1,0.5,0.5))
 p
-ggsave("Figure4.jpeg",width=25,height=25,units="cm")
+ggsave("Figure4.jpeg",width=22,height=25,units="cm")
+
+
