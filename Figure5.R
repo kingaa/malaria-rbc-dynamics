@@ -56,7 +56,7 @@ top_pred_df <- preds_df |>
                          3~"Low",
                          4~"Unsupplemented"),
          facet_lab=case_match(label,
-                              "Model B, Day 10, 3-day"~"Best model (22.2%)",
+                              "Model B, Day 10, 3-day"~"First-best model (22.2%)",
                               "Model B, Day 10, 2-day"~"Second-best model (10.2%)",
                               "Model E, Day 10, 3-day"~"Third-best model (9.9%)",
                               "Model B, Day 9, 2-day"~"Fourth-best model (8.9%)"))
@@ -64,12 +64,12 @@ top_pred_df$pABA <- factor(top_pred_df$pABA,levels=c("Unsupplemented","Low","Med
 
 top_pred_text <- data.frame(top_pred_df$label |> unique()) |> setNames("label") |>
   mutate(text=case_match(label,
-                         "Model B, Day 10, 3-day"~"Model B\nDay 10 breakpoint\nLag (i) = 3 days",
-                         "Model B, Day 10, 2-day"~"Model B\nDay 10 breakpoint\nLag (i) = 2 days",
-                         "Model E, Day 10, 3-day"~"Model E\nDay 10 breakpoint\nLag (i) = 3 days",
-                         "Model B, Day 9, 2-day"~"Model B\nDay 9 breakpoint\nLag (i) = 2 days"),
+                         "Model B, Day 10, 3-day"~"Model B\nBpt = d10\nLag (i) = 3d",
+                         "Model B, Day 10, 2-day"~"Model B\nBpt = d10\nLag (i) = 2d",
+                         "Model E, Day 10, 3-day"~"Model E\nBpt = d10\nLag (i) = 3d",
+                         "Model B, Day 9, 2-day"~"Model B\nBpt = d9\nLag (i) = 2d"),
          facet_lab=case_match(label,
-                              "Model B, Day 10, 3-day"~"Best model (22.2%)",
+                              "Model B, Day 10, 3-day"~"First-best model (22.2%)",
                               "Model B, Day 10, 2-day"~"Second-best model (10.2%)",
                               "Model E, Day 10, 3-day"~"Third-best model (9.9%)",
                               "Model B, Day 9, 2-day"~"Fourth-best model (8.9%)"),
@@ -79,44 +79,44 @@ top_pred_text <- data.frame(top_pred_df$label |> unique()) |> setNames("label") 
                         "Model E, Day 10, 3-day"~"C",
                         "Model B, Day 9, 2-day"~"D"))
 
-top_pred_df$facet_lab <- factor(top_pred_df$facet_lab,levels=c("Best model (22.2%)",
+top_pred_df$facet_lab <- factor(top_pred_df$facet_lab,levels=c("First-best model (22.2%)",
                                                                "Second-best model (10.2%)",
                                                                "Third-best model (9.9%)",
                                                                "Fourth-best model (8.9%)"))
-top_pred_text$facet_lab <- factor(top_pred_text$facet_lab,levels=c("Best model (22.2%)",
+top_pred_text$facet_lab <- factor(top_pred_text$facet_lab,levels=c("First-best model (22.2%)",
                                                                    "Second-best model (10.2%)",
                                                                    "Third-best model (9.9%)",
                                                                    "Fourth-best model (8.9%)"))
 
 phase_lab <- data.frame(c("Phase 1","","",""),
            c("Phase 2","","",""),
-           c("Best model (22.2%)",
+           c("First-best model (22.2%)",
              "Second-best model (10.2%)",
              "Third-best model (9.9%)",
              "Fourth-best model (8.9%)")) |> setNames(c("Phase1","Phase2","facet_lab"))
-phase_lab$facet_lab <- factor(phase_lab$facet_lab,levels=c("Best model (22.2%)",
+phase_lab$facet_lab <- factor(phase_lab$facet_lab,levels=c("First-best model (22.2%)",
                                                            "Second-best model (10.2%)",
                                                            "Third-best model (9.9%)",
                                                            "Fourth-best model (8.9%)"))
   
 
-top_pred_df |>
+top4 <- top_pred_df |>
   ggplot()+
   geom_line(aes(x=lagRBC,y=med,col=pABA,linetype=factor(phase)),linewidth=1)+
   geom_ribbon(aes(x=lagRBC,ymin=lo,ymax=hi,fill=pABA,group=interaction(phase,pABA)),alpha=0.2)+
-  geom_label(data=top_pred_text,aes(x=7500000,y=4200000,label=text))+
-  geom_text(data=top_pred_text,aes(x=300000,y=4550000,label=tag),fontface="bold",size=7)+
+  geom_label(data=top_pred_text,aes(x=7700000,y=3700000,label=text))+
+  #geom_text(data=top_pred_text,aes(x=300000,y=4550000,label=tag),fontface="bold",size=7)+
   
   #geom_text(data=phase_lab,aes(x=7000000,y=3000000,label=Phase2),size=5)+
   #geom_text(data=phase_lab,aes(x=4000000,y=750000,label=Phase1),size=5)+
   
-  scale_x_continuous(labels = aakmisc::scinot,limits=c(0,10000000))+
-  scale_y_continuous(labels = aakmisc::scinot,limits=c(0,4700000))+
+  scale_x_continuous(breaks=c(2000000,4000000,6000000,8000000),labels = aakmisc::scinot,limits=c(1500000,9000000))+
+  scale_y_continuous(labels = aakmisc::scinot,limits=c(0,4100000))+
   facet_wrap(facet_lab~.,nrow=2)+
   scale_colour_manual(values=cbpABA[2:5])+
   scale_fill_manual(values=cbpABA[2:5])+
   guides(colour = guide_legend(override.aes = list(alpha = 1)))+
-  labs(linetype="Phase",colour="Parasite nutrient (pABA)",fill="Parasite nutrient (pABA)",x=expression(paste("RBC density at time ", italic("t"), "-i (density per µL)")),
+  labs(linetype="Phase",colour="Parasite nutrient\n(pABA)",fill="Parasite nutrient\n(pABA)",x=expression(paste("RBC density at time ", italic("t"), "-i (density per µL)")),
        y=expression(paste("Reticulocyte supply at time ", italic("t"), " (density per µL)")))+
   theme_bw()+
   theme(
@@ -124,11 +124,15 @@ top_pred_df |>
     strip.text=element_text(size=14),
     axis.text=element_text(size=12),
     axis.title=element_text(size=15),
-    legend.position="top",
+    legend.position="right",
     legend.background=element_blank()
   )
+top4
 
-ggsave("Figure5.jpeg",width=25,height=25,units="cm")
+ggdraw(top4)+draw_plot_label(label = c("A", "B","C","D"), size = 15,
+                              x = c(0.1,0.47,0.1,0.47), y = c(0.99,0.99,0.53,0.53))
+
+ggsave("Figure5.jpeg",width=25,height=22,units="cm")
 
 ##########################
 #### Top nine facet plot ####
@@ -263,7 +267,7 @@ top_pred_df |>
     legend.background=element_blank()
   )
 
-ggsave("FigureS4.jpeg",width=25,height=25,units="cm")
+ggsave("FigureS5.jpeg",width=25,height=25,units="cm")
 
 ##########################
 #### 10-24 facet plot ####
@@ -447,4 +451,4 @@ ggplot()+
     legend.background=element_blank()
   )
 
-ggsave("FigureS5.jpeg",width=25,height=25,units="cm")
+ggsave("FigureS6.jpeg",width=25,height=25,units="cm")

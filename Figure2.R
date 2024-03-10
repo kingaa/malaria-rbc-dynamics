@@ -259,7 +259,7 @@ unsupplemented<-sm1_sub |>
     plot.title=element_text(hjust=0.5,face="bold",size=13),
     panel.grid=element_blank(),
     legend.background=element_blank(),
-    legend.position=c(0.7,0.15),
+    legend.position=c(0.7,0.35),
     legend.title=element_text(size=10),
     legend.text=element_text(size=8),
     strip.background=element_blank(),
@@ -301,7 +301,7 @@ bottom_row <- ggarrange(unsupplemented, median, nrow = 1, labels = c("C","D"))
 ###########################
 #### Overall plot #########
 ###########################
-overall_plot <- ggarrange(top_columns,bottom_row, nrow=2, heights=c(1,1))
+overall_plot <- ggarrange(top_columns,bottom_row, nrow=2, heights=c(1,0.5))
 
 ggsave("Figure2.jpeg",plot=overall_plot,
        width=30,height=40,units="cm")
