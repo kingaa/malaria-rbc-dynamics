@@ -169,8 +169,7 @@ best_model_plot <- results_df_R |>
       legend.text=element_text(size=8),
       strip.text=element_text(size=12),
       strip.background=element_blank(),
-      plot.title=element_text(size=14,hjust=0.5,face="bold"),
-      panel.border = element_rect(linewidth=4)
+      plot.title=element_text(size=14,hjust=0.5,face="bold")
       
     )
 
@@ -201,12 +200,10 @@ library("cowplot")
 # Arrange plots using arrangeGrob
 # returns a gtable (gt)
 gt <- arrangeGrob(best_model_plot,                               
-                  second_model_plot, best_model_facet,                              
-                  ncol = 2, nrow = 3, 
-                  layout_matrix = cbind(c(1,1,3), c(2,2,3)))
+                  best_model_facet,                              
+                  ncol = 1, nrow = 2,heights=c(1,0.33))
 # Add labels to the arranged plots
 p <- as_ggplot(gt) +                                # transform to a ggplot
-  draw_plot_label(label = c("A", "B", "C"), size = 15,
-                  x = c(0, 0.5, 0), y = c(1, 1, 0.4))
-
-ggsave("FigureS10.jpeg",width=22,height=16,units="cm")
+  draw_plot_label(label = c("A", "B"), size = 15,
+                  x = c(0,0), y = c(1, 0.3))
+ggsave("FigureS10.jpeg",width=15,height=16,units="cm")
