@@ -63,7 +63,7 @@ labels <- data.frame(lag=c("i = 1","i = 2","i = 3","i = 4","i = 5"),
 data |>
   ggplot()+
   geom_path(aes(x=lagRBC,y=R,col=pABA),linewidth=1)+
-  geom_text(aes(x=lagRBC,y=R,label=time),size=5)+
+  geom_text(data=filter(data,!time%in%seq(2,20,2)),aes(x=lagRBC,y=R,label=time),size=5)+
   geom_text(data=labels,aes(x=9750000,y=4500000,label=label),size=5,fontface='bold')+
   scale_x_continuous(labels=aakmisc::scinot)+
   scale_y_continuous(labels=aakmisc::scinot)+
