@@ -48,7 +48,7 @@ expFun <- function(E){1/(1+exp(-10*(-E+0.5)))}
 
 (Qun_assump1 <- ggplot()+
     geom_line(aes(x=seq(0,1,0.01),y=sapply(seq(0,1,0.01),function(x){dnorm(x,0.5,0.35)-0.4})),linetype="dotdash",linewidth=2)+
-    geom_text(aes(x=0.8,y=0.75,label="Time-varying (9,15,19)"))+
+    geom_text(aes(x=0.8,y=0.75,label="Non-autonomous (9,15,19)"))+
     
     geom_line(aes(x=c(0,1),y=0.2),linetype="solid",linewidth=2)+
     geom_text(aes(x=0.5,y=0.25,label="Constant (2,13)"))+
@@ -81,6 +81,7 @@ expFun <- function(E){1/(1+exp(-10*(-E+0.5)))}
     theme(axis.title=element_text(size=15),
           axis.text.x=element_text(size=12),
           axis.text.y=element_blank(),
+          axis.title.y=element_blank(),
           axis.ticks=element_blank(),
           panel.grid=element_blank(),
           plot.title=element_text(hjust=0,face="bold"))
