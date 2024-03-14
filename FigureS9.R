@@ -11,7 +11,7 @@ library(aakmisc)
 library(gridExtra)
 library(cowplot)
 
-cbPalette <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+cbpABA <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
 
 source("POMP_GroupLevel_DataPrep.R")
 
@@ -201,28 +201,28 @@ df$loglik_sub <- best$loglik_sub
 
 df |>
   ggplot()+
-  geom_line(aes(x=lagRBC,y=pred,group=interaction(mouse,phase,pABA),col=pABA))+
+  geom_line(aes(x=lagRBC,y=pred,group=interaction(mouse,phase,pABA),col=pABA,linetype=phase))+
   scale_x_continuous(labels = aakmisc::scinot)+
   scale_y_continuous(labels = aakmisc::scinot,limits=c(0,4500000))+
-  annotate("text",x=7000000,y=3200000,label="Phase 2",size=5)+
-  annotate("text",x=6000000,y=550000,label="Phase 1",size=5)+
-  geom_segment(aes(x=6000000,xend=6000000,y=1100000,yend=600000))+
-  geom_segment(aes(x=7000000,xend=5900000,y=3000000,yend=2500000))+
+  #annotate("text",x=7000000,y=3200000,label="Phase 2",size=5)+
+  #annotate("text",x=6000000,y=550000,label="Phase 1",size=5)+
+  #geom_segment(aes(x=6000000,xend=6000000,y=1100000,yend=600000))+
+  #geom_segment(aes(x=7000000,xend=5900000,y=3000000,yend=2500000))+
   xlab("")+ylab("Reticulocyte supply (t)")+
   scale_colour_manual(values=cbpABA[2:5])+
   geom_label(aes(x=9000000,y=4000000,label="Model E\nBreakpoint 10\nLag = 3 days"))+
   theme_bw()+
   guides(colour = guide_legend(override.aes = list(alpha = 1)))+
   labs(x=expression(paste("RBC density at time ", italic("t"), "-3 (density per µL)")),
-       y=expression(paste("Reticulocyte supply at time ", italic("t"), " (density per µL)"),
-                    colour="Parasite nutrient (pABA)"))+
+       y=expression(paste("Reticulocyte supply at time ", italic("t"), " (density per µL)")),
+                    colour="Parasite nutrient (pABA)",linetype="Phase")+
   theme(
     axis.title=element_text(size=15),
     axis.title.y=element_text(size=15,colour="black"),
     axis.text=element_text(size=12),
     axis.text.x=element_text(colour="black"),
     panel.grid.minor=element_blank(),
-    legend.position=c(0.2,0.2),
+    legend.position=c(0.225,0.25),
     legend.background=element_blank(),
     legend.title=element_text(size=13),
     legend.text=element_text(size=10),
