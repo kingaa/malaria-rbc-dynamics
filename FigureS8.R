@@ -16,7 +16,7 @@ cbPalette <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2",
 source("POMP_GroupLevel_DataPrep.R")
 
 flow |> 
-  select(time=day,box,pABA,E=Eryth,R=Retic,pABA,mouseid) |>
+  select(time=day,box,pABA,E=Eryth,R=Retic,pABA,mouseid,mouse) |>
   mutate(RBC=E+R,
          lagRBC=lag(RBC,1),
          lag="i = 1") |>
@@ -24,7 +24,7 @@ flow |>
   filter(time<=20,box!="05",mouseid!="01-02",mouseid!="02-03") -> data1
 
 flow |> 
-  select(time=day,box,pABA,E=Eryth,R=Retic,pABA,mouseid) |>
+  select(time=day,box,pABA,E=Eryth,R=Retic,pABA,mouseid,mouse) |>
   mutate(RBC=E+R,
          lagRBC=lag(RBC,2),
          lag="i = 2") |>
@@ -32,7 +32,7 @@ flow |>
   filter(time<=20,box!="05",mouseid!="01-02",mouseid!="02-03") -> data2
 
 flow |> 
-  select(time=day,box,pABA,E=Eryth,R=Retic,pABA,mouseid) |>
+  select(time=day,box,pABA,E=Eryth,R=Retic,pABA,mouseid,mouse) |>
   mutate(RBC=E+R,
          lagRBC=lag(RBC,3),
          lag="i = 3") |>
@@ -40,7 +40,7 @@ flow |>
   filter(time<=20,box!="05",mouseid!="01-02",mouseid!="02-03") -> data3
 
 flow |> 
-  select(time=day,box,pABA,E=Eryth,R=Retic,pABA,mouseid) |>
+  select(time=day,box,pABA,E=Eryth,R=Retic,pABA,mouseid,mouse) |>
   mutate(RBC=E+R,
          lagRBC=lag(RBC,4),
          lag="i = 4") |>
@@ -48,7 +48,7 @@ flow |>
   filter(time<=20,box!="05",mouseid!="01-02",mouseid!="02-03") -> data4
 
 flow |> 
-  select(time=day,box,pABA,E=Eryth,R=Retic,pABA,mouseid) |>
+  select(time=day,box,pABA,E=Eryth,R=Retic,pABA,mouseid,mouse) |>
   mutate(RBC=E+R,
          lagRBC=lag(RBC,5),
          lag="i = 5") |>
@@ -89,3 +89,31 @@ data |>
   )
 
 ggsave("FigureS8.jpeg",width=30,height=20,units="cm")
+
+data |>
+  ggplot()+
+  geom_point(aes(x=lagRBC,y=R,col=mouse))+
+  #geom_text(data=filter(data,!time%in%seq(2,20,2)),aes(x=lagRBC,y=R,label=time),size=5)+
+  #geom_text(data=labels,aes(x=9750000,y=4500000,label=label),size=5,fontface='bold')+
+  scale_x_continuous(labels=aakmisc::scinot)+
+  scale_y_continuous(labels=aakmisc::scinot)+
+  #scale_colour_manual(values=cbPalette[2:5])+
+  labs(x=expression(paste("RBC density at time ", italic("t"), "-i (density per µL)")),
+       y=expression(paste("Reticulocyte supply at time ", italic("t"), " (density per µL)"))
+  )+
+  facet_grid(lag~pABA)+
+  labs(colour="Parasite nutrient (pABA)")+
+  theme_bw()+
+  theme(
+    axis.title=element_text(size=15),
+    axis.title.y=element_text(size=15,colour="black"),
+    axis.text=element_text(size=11),
+    panel.grid=element_blank(),
+    legend.position="none",
+    legend.title=element_text(size=12),
+    legend.text=element_text(size=11),
+    strip.background=element_blank(),
+    strip.text=element_text(size=13),
+    plot.title=element_text(size=17,hjust=0.5)
+    
+  )
