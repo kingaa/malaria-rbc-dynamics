@@ -29,7 +29,7 @@ expFun <- function(E){1/(1+exp(-10*(-E+0.5)))}
     geom_text(aes(x=Erange[1]+0.55,y=0.5,label="Linear (5,6,11,14,16,17)"),hjust=0)+
     
     geom_line(aes(x=seq(0,1,0.01),y=sapply(seq(0,1,0.01),expFun)),linewidth=2,linetype="dotted")+
-    geom_text(aes(x=Erange[1]+0.2,y=0.99,label="Hill or sigmoid function (2,4,18)"),hjust=0)+
+    geom_text(aes(x=Erange[1]+0.2,y=0.99,label="Hill or sigmoid function (2,3,18)"),hjust=0)+
     
     scale_x_continuous(labels = c("deficit", "homeostatic\nequilibrium"), breaks = c(0.05, 0.95))+
     
