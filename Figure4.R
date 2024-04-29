@@ -22,21 +22,21 @@ stats_df <- read.csv("results_regression_stats.csv") |>
   select(-c(X01:X04))
 stats_df$bp[is.na(stats_df$bp)] <- "None"
 
-stats_df$form <- factor(stats_df$model,levels=c("m1","m2","m3","m4","m5","m6"),
-                        labels=c("Non-linear","Non-linear","Non-linear","Linear","Linear","Linear"))
-stats_df$model <- factor(stats_df$model,levels=c("m1","m2","m3","m4","m5","m6"),
-                         labels=c("Model A","Model B","Model C","Model D","Model E","Model F"))
+stats_df$form <- factor(stats_df$model,levels=c("m1","m2","m3","m4","m5","m6","m7","m8"),
+                        labels=c("Non-linear","Non-linear","Non-linear","Linear","Linear","Linear","Sigmoid","Sigmoid"))
+stats_df$model <- factor(stats_df$model,levels=c("m1","m2","m3","m4","m5","m6","m7","m8"),
+                         labels=c("Model A","Model B","Model C","Model D","Model E","Model F","Model G","Model H"))
 stats_df$bp <- factor(stats_df$bp,levels=c(8,9,10,11,"None"),labels=c("Day 8","Day 9","Day 10","Day 11","No breakpoint"))
-stats_df$lag <- factor(stats_df$lag,levels=c(1,2,3,4,5),labels=c("1-day","2-day","3-day","4-day","5-day"))
-stats_df$pABA <- factor(stats_df$model,levels=c("Model A","Model B","Model C","Model D","Model E","Model F"),
-                        labels=c("Shape/slope and intercept","Intercept only","No effect",
-                                 "Shape/slope and intercept","Intercept only","No effect"))
+stats_df$lag <- factor(stats_df$lagChoice,levels=c(1,2,3,4,5),labels=c("1-day","2-day","3-day","4-day","5-day"))
+#stats_df$pABA <- factor(stats_df$model,levels=c("Model A","Model B","Model C","Model D","Model E","Model F"),
+                        #labels=c("Shape/slope and intercept","Intercept only","No effect",
+                                 #"Shape/slope and intercept","Intercept only","No effect"))
 
 
 stats_df |> count(model) |> mutate(percent = 100* n/nrow(stats_df))
-stats_df |> count(lag) |> mutate(percent = 100* n/nrow(stats_df))
+stats_df |> count(lagChoice) |> mutate(percent = 100* n/nrow(stats_df))
 stats_df |> count(bp) |> mutate(percent = 100* n/nrow(stats_df))
-stats_df |> count(pABA) |> mutate(percent = 100* n/nrow(stats_df))
+#stats_df |> count(pABA) |> mutate(percent = 100* n/nrow(stats_df))
 
 #### Lag stacked barplot ####
 stats_lag <- stats_df |> select(lag) |> group_by(lag) |> count()
@@ -83,9 +83,11 @@ lag_bar
 stats_model <- stats_df |> select(model) |> group_by(model) |> count()
 stats_model$form <- factor(stats_model$model,
                            levels=c("Model A","Model B","Model C",
-                                    "Model D","Model E","Model F"),
+                                    "Model D","Model E","Model F",
+                                    "Model G","Model H"),
                            labels=c("Non-linear","Non-linear","Non-linear",
-                                    "Linear","Linear","Linear"))
+                                    "Linear","Linear","Linear",
+                                    "Sigmoid","Sigmoid"))
 
 plot_labs_model <- data.frame(
   c("Model F","Model E","Model C","Model B"),
@@ -177,7 +179,7 @@ form_df <- stats_df |>
   ungroup()
 
 form_df$lag <- factor(form_df$lag,levels=c("2-day","3-day","4-day"),
-                      labels=c("2-day lag (29.4%)","3-day lag (48.0%)","4-day lag (22.6%)"))
+                      labels=c("2-day lag (29.5%)","3-day lag (48.0%)","4-day lag (22.5%)"))
 
 form_plot <- form_df |>
   ggplot()+
@@ -203,6 +205,7 @@ form_plot <- form_df |>
     strip.text=element_text(size=14),
     legend.text=element_text(size=10)
   )
+form_plot
 
 #### Join summary plots together ####
 layout <- rbind(c(1,2,3),

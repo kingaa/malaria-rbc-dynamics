@@ -17,13 +17,13 @@ stats_df <- read.csv("results_regression_stats.csv")|>
   group_by(rep) |>
   filter(AICc==min(AICc)) |>
   ungroup() |> 
-  select(model,lag,bp=X01,loglik,rep,AICc)
+  select(model,lag=lagChoice,bp=X01,loglik,rep,AICc)
 stats_df$bp[is.na(stats_df$bp)] <- "None"
 
-stats_df$model <- factor(stats_df$model,levels=c("m1","m2","m3","m4","m5","m6"),
-                         labels=c("Model A","Model B","Model C","Model D","Model E","Model F"))
+stats_df$model <- factor(stats_df$model,levels=c("m1","m2","m3","m4","m5","m6","m7","m8"),
+                         labels=c("Model A","Model B","Model C","Model D","Model E","Model F","Model G","Model H"))
 stats_df$bp <- factor(stats_df$bp,levels=c(8,9,10,11,"None"),labels=c("Day 8","Day 9","Day 10","Day 11","None"))
-stats_df$lag <- factor(stats_df$lag,levels=c(1,2,3,4),labels=c("1-day","2-day","3-day","4-day"))
+stats_df$lag <- factor(stats_df$lag,levels=c(1,2,3,4,5),labels=c("1-day","2-day","3-day","4-day","5-day"))
 
 overall_freq <- stats_df |> 
   group_by(bp,model,lag) |> 
@@ -31,7 +31,7 @@ overall_freq <- stats_df |>
   ungroup() |>
   mutate(freq=n/sum(n))
 
-model_list <- stats_df$model |> unique()
+model_list <- levels(stats_df$model)
 bp_list <- stats_df$bp |> unique()
 combos <- expand_grid(model_list,bp_list) |> setNames(c("model","bp"))
 df_x <- anti_join(combos, overall_freq, by = c("model","bp"))
@@ -54,4 +54,4 @@ overall_freq |>
     axis.title=element_text(size=15)
   )
 
-ggsave("FigureS4.jpeg",width=25,height=20,units="cm")
+ggsave("FigureS4.jpeg",width=30,height=20,units="cm")

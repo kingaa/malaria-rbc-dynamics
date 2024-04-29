@@ -15,13 +15,10 @@ cbpABA <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#
 
 #### Data preparation ####
 stats_df <- read.csv("results_regression_stats.csv") |>
-  mutate(AIC=AIC_sub,
-         AICc=AIC+2*p_sub*(p_sub+1)/(n_sub-p_sub-1),
-         bp=X01) |>
   group_by(rep) |>
   filter(AICc==min(AICc)) |>
   ungroup() |> 
-  select(model,lag,bp,loglik_sub,rep,AICc)
+  select(model,lag=lagChoice,bp=X01,loglik_sub,rep,AICc)
 stats_df$bp[is.na(stats_df$bp)] <- "None"
 
 stats_df$model <- factor(stats_df$model,levels=c("m1","m2","m3","m4","m5","m6"),

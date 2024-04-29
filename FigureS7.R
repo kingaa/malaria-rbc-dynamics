@@ -15,13 +15,13 @@ stats_df <- read.csv("results_regression_stats.csv") |>
   group_by(rep) |>
   filter(AICc==min(AICc)) |>
   ungroup () |>
-  select(dataset,model, bp=X01,lag,loglik)
+  select(dataset,model, bp=X01,lag=lagChoice,loglik)
 stats_df$bp[is.na(stats_df$bp)] <- "None"
 
-stats_df$model <- factor(stats_df$model,levels=c("m1","m2","m3","m4","m5","m6"),
-                         labels=c("Model A","Model B","Model C","Model D","Model E","Model F"))
+stats_df$model <- factor(stats_df$model,levels=c("m1","m2","m3","m4","m5","m6","m7","m8"),
+                         labels=c("Model A","Model B","Model C","Model D","Model E","Model F","Model G","Model H"))
 stats_df$bp <- factor(stats_df$bp,levels=c(8,9,10,11,"None"),labels=c("Day 8","Day 9","Day 10","Day 11","None"))
-stats_df$lag <- factor(stats_df$lag,levels=c(1,2,3,4),labels=c("1-day","2-day","3-day","4-day"))
+stats_df$lag <- factor(stats_df$lag,levels=c(1,2,3,4,5),labels=c("1-day","2-day","3-day","4-day","5-day"))
 
 lik_df <- stats_df |>
   unite("label",c(model,bp,lag),sep=", ",remove=FALSE)
