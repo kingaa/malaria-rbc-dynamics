@@ -23,13 +23,13 @@ expFun <- function(E){1/(1+exp(-10*(-E+0.5)))}
 (RE_assump <- ggplot()+
     
     geom_line(aes(x=Erange,y=c(0.25,0.25)),linetype="solid",linewidth=2)+
-    geom_text(aes(x=Erange[1],y=0.29,label="Constant (1,4,7,8,11,12)"),hjust=0)+
+    geom_text(aes(x=Erange[1],y=0.29,label="Constant (1,4,7,8,11)"),hjust=0)+
     
     geom_line(aes(x=Erange,y=c(1,0)),linetype="longdash",linewidth=2)+
-    geom_text(aes(x=Erange[1]+0.55,y=0.5,label="Linear (5,6,11,14,16,17)"),hjust=0)+
+    geom_text(aes(x=Erange[1]+0.55,y=0.5,label="Linear (5,6,13,15,)"),hjust=0)+
     
     geom_line(aes(x=seq(0,1,0.01),y=sapply(seq(0,1,0.01),expFun)),linewidth=2,linetype="dotted")+
-    geom_text(aes(x=Erange[1]+0.2,y=0.99,label="Hill or sigmoid function (2,3,18)"),hjust=0)+
+    geom_text(aes(x=Erange[1]+0.2,y=0.99,label="Hill (2,3,17)"),hjust=0)+
     
     scale_x_continuous(labels = c("deficit", "homeostatic\nequilibrium"), breaks = c(0.05, 0.95))+
     
@@ -48,10 +48,10 @@ expFun <- function(E){1/(1+exp(-10*(-E+0.5)))}
 
 (Qun_assump1 <- ggplot()+
     geom_line(aes(x=seq(0,1,0.01),y=sapply(seq(0,1,0.01),function(x){dnorm(x,0.5,0.35)-0.4})),linetype="dotdash",linewidth=2)+
-    geom_text(aes(x=0.8,y=0.75,label="Non-autonomous (9,15,19)"))+
+    geom_text(aes(x=0.8,y=0.75,label="Non-autonomous (9,14,18)"))+
     
     geom_line(aes(x=c(0,1),y=0.2),linetype="solid",linewidth=2)+
-    geom_text(aes(x=0.5,y=0.25,label="Constant (2,13)"))+
+    geom_text(aes(x=0.5,y=0.25,label="Constant (2,12)"))+
     
     scale_x_continuous(labels = c("", "\n"), breaks = c(0.05, 0.95))+
     
@@ -69,7 +69,7 @@ expFun <- function(E){1/(1+exp(-10*(-E+0.5)))}
 (Qun_assump2 <- ggplot()+
     
     geom_line(aes(x=Erange,y=c(0,1)),linetype="longdash",linewidth=2)+
-    geom_text(aes(x=Erange[1]+0.55,y=0.5,label="Linear (1,3,4,5,7,8,11,12,16,17,18)"),hjust=0)+
+    geom_text(aes(x=Erange[1]+0.55,y=0.5,label="Linear (1,3,4,5,7,8,11,13,16,17,18)"),hjust=0)+
     
     scale_x_continuous(labels = c("deficit", "homeostatic\nequilibrium"), breaks = c(0.05, 0.95))+
     
