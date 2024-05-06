@@ -41,7 +41,7 @@ overall_freq |>
   ggplot(aes(x=lag,y=freq))+
   geom_bar(stat="identity",fill="darkblue")+
   geom_text(aes(label = freq),vjust=-0.5)+
-  geom_text(data=df_x,aes(x=2,y=0.15,label=label),size=25,col="lightgrey")+
+  geom_text(data=df_x,aes(x=2.5,y=0.15,label=label),size=25,col="lightgrey")+
   facet_grid(bp~model)+
   ylim(0,0.3)+
   labs(x="Reticulocyte response lag",y="Frequency")+

@@ -48,7 +48,7 @@ cumsum(tmp$n/1000)
 #### Top 4 facet plot ####
 ##########################
 top_pred_df <- preds_df |>
-  filter(label=="Model B, Day 10, 3-day"|label=="Model B, Day 10, 2-day"|label=="Model E, Day 10, 3-day"|label=="Model B, Day 9, 2-day") |> 
+  filter(label=="Model B, Day 10, 3-day"|label=="Model E, Day 10, 3-day"|label=="Model B, Day 10, 2-day"|label=="Model B, Day 9, 2-day") |> 
   #separate_wider_delim(mouseid,delim="-",names=c("box","mouse")) |>
   mutate(pABA=case_match(box,
                          1~"High",
@@ -56,48 +56,48 @@ top_pred_df <- preds_df |>
                          3~"Low",
                          4~"Unsupplemented"),
          facet_lab=case_match(label,
-                              "Model B, Day 10, 3-day"~"First-best model (22.1%)",
-                              "Model B, Day 10, 2-day"~"Second-best model (10.2%)",
-                              "Model E, Day 10, 3-day"~"Third-best model (9.9%)",
-                              "Model B, Day 9, 2-day"~"Fourth-best model (8.7%)"))
+                              "Model B, Day 10, 3-day"~"First-best model (20.6%)",
+                              "Model E, Day 10, 3-day"~"Second-best model (12.2%)",
+                              "Model B, Day 10, 2-day"~"Third-best model (10.4%)",
+                              "Model B, Day 9, 2-day"~"Fourth-best model (10.4%)"))
 top_pred_df$pABA <- factor(top_pred_df$pABA,levels=c("Unsupplemented","Low","Medium","High"))
 
 top_pred_text <- data.frame(top_pred_df$label |> unique()) |> setNames("label") |>
   mutate(text=case_match(label,
                          "Model B, Day 10, 3-day"~"Model B\nBpt = d10\nLag (i) = 3d",
-                         "Model B, Day 10, 2-day"~"Model B\nBpt = d10\nLag (i) = 2d",
                          "Model E, Day 10, 3-day"~"Model E\nBpt = d10\nLag (i) = 3d",
+                         "Model B, Day 10, 2-day"~"Model B\nBpt = d10\nLag (i) = 2d",
                          "Model B, Day 9, 2-day"~"Model B\nBpt = d9\nLag (i) = 2d"),
          facet_lab=case_match(label,
-                              "Model B, Day 10, 3-day"~"First-best model (22.1%)",
-                              "Model B, Day 10, 2-day"~"Second-best model (10.2%)",
-                              "Model E, Day 10, 3-day"~"Third-best model (9.9%)",
-                              "Model B, Day 9, 2-day"~"Fourth-best model (8.7%)"),
+                              "Model B, Day 10, 3-day"~"First-best model (20.6%)",
+                              "Model E, Day 10, 3-day"~"Second-best model (12.2%)",
+                              "Model B, Day 10, 2-day"~"Third-best model (10.4%)",
+                              "Model B, Day 9, 2-day"~"Fourth-best model (10.4%)"),
          tag=case_match(label,
                         "Model B, Day 10, 3-day"~"A",
-                        "Model B, Day 10, 2-day"~"B",
-                        "Model E, Day 10, 3-day"~"C",
+                        "Model E, Day 10, 3-day"~"B",
+                        "Model B, Day 10, 2-day"~"C",
                         "Model B, Day 9, 2-day"~"D"))
 
-top_pred_df$facet_lab <- factor(top_pred_df$facet_lab,levels=c("First-best model (22.1%)",
-                                                               "Second-best model (10.2%)",
-                                                               "Third-best model (9.9%)",
-                                                               "Fourth-best model (8.7%)"))
-top_pred_text$facet_lab <- factor(top_pred_text$facet_lab,levels=c("First-best model (22.1%)",
-                                                                   "Second-best model (10.2%)",
-                                                                   "Third-best model (9.9%)",
-                                                                   "Fourth-best model (8.7%)"))
+top_pred_df$facet_lab <- factor(top_pred_df$facet_lab,levels=c("First-best model (20.6%)",
+                                                               "Second-best model (12.2%)",
+                                                               "Third-best model (10.4%)",
+                                                               "Fourth-best model (10.4%)"))
+top_pred_text$facet_lab <- factor(top_pred_text$facet_lab,levels=c("First-best model (20.6%)",
+                                                                   "Second-best model (12.2%)",
+                                                                   "Third-best model (10.4%)",
+                                                                   "Fourth-best model (10.4%)"))
 
 phase_lab <- data.frame(c("Phase 1","","",""),
            c("Phase 2","","",""),
-           c("First-best model (22.1%)",
-             "Second-best model (10.2%)",
-             "Third-best model (9.9%)",
-             "Fourth-best model (8.7%)")) |> setNames(c("Phase1","Phase2","facet_lab"))
-phase_lab$facet_lab <- factor(phase_lab$facet_lab,levels=c("First-best model (22.1%)",
-                                                           "Second-best model (10.2%)",
-                                                           "Third-best model (9.9%)",
-                                                           "Fourth-best model (8.7%)"))
+           c("First-best model (20.6%)",
+             "Second-best model (12.2%)",
+             "Third-best model (10.4%)",
+             "Fourth-best model (10.4%)")) |> setNames(c("Phase1","Phase2","facet_lab"))
+phase_lab$facet_lab <- factor(phase_lab$facet_lab,levels=c("First-best model (20.6%)",
+                                                           "Second-best model (12.2%)",
+                                                           "Third-best model (10.4%)",
+                                                           "Fourth-best model (10.4%)"))
   
 
 top4 <- top_pred_df |>
@@ -139,13 +139,13 @@ ggsave("Figure5.jpeg",width=25,height=22,units="cm")
 ##########################
 top_pred_df <- preds_df |>
   filter(label=="Model B, Day 10, 3-day"|
-           label=="Model B, Day 10, 2-day"|
            label=="Model E, Day 10, 3-day"|
+           label=="Model B, Day 10, 2-day"|
            label=="Model B, Day 9, 2-day"|
            label=="Model E, Day 11, 4-day"|
            label=="Model B, Day 11, 4-day"|
-           label=="Model E, Day 8, 4-day"|
            label=="Model E, Day 9, 3-day"|
+           label=="Model E, Day 8, 4-day"|
            label=="Model B, Day 9, 3-day"
          ) |> 
   mutate(pABA=case_match(box,
@@ -154,89 +154,89 @@ top_pred_df <- preds_df |>
                          3~"Low",
                          4~"Unsupplemented"),
          facet_lab=case_match(label,
-                              "Model B, Day 10, 3-day"~"Best model (22.1%)",
-                              "Model B, Day 10, 2-day"~"Second-best model (10.2%)",
-                              "Model E, Day 10, 3-day"~"Third-best model (9.9%)",
-                              "Model B, Day 9, 2-day"~"Fourth-best model (8.7%)",
-                              "Model E, Day 11, 4-day"~"Fifth-model (7.5%)",
-                              "Model B, Day 11, 4-day"~"Sixth-best model (6.0%)",
-                              "Model E, Day 8, 4-day"~"Seventh-best model (5.1%)",
-                              "Model E, Day 9, 3-day"~"Eighth-best model (4.7%)",
-                              "Model B, Day 9, 3-day"~"Ninth-best model (3.0%)")
+                              "Model B, Day 10, 3-day"~"Best model (20.6%)",
+                              "Model E, Day 10, 3-day"~"Second-best model (12.2%)",
+                              "Model B, Day 10, 2-day"~"Third-best model (10.4%)",
+                              "Model B, Day 9, 2-day"~"Fourth-best model (10.4%)",
+                              "Model E, Day 11, 4-day"~"Fifth-model (6.2%)",
+                              "Model B, Day 11, 4-day"~"Sixth-best model (5.2%)",
+                              "Model E, Day 9, 3-day"~"Seventh-best model (3.9%)",
+                              "Model E, Day 8, 4-day"~"Eighth-best model (3.7%)",
+                              "Model B, Day 9, 3-day"~"Ninth-best model (3.6%)")
          )
 top_pred_df$pABA <- factor(top_pred_df$pABA,levels=c("Unsupplemented","Low","Medium","High"))
 
 top_pred_text <- data.frame(top_pred_df$label |> unique()) |> setNames("label") |>
   mutate(text=case_match(label,
                          "Model B, Day 10, 3-day"~"Model B\nDay 10 breakpoint\nLag (i) = 3 days",
-                         "Model B, Day 10, 2-day"~"Model B\nDay 10 breakpoint\nLag (i) = 2 days",
                          "Model E, Day 10, 3-day"~"Model E\nDay 10 breakpoint\nLag (i) = 3 days",
+                         "Model B, Day 10, 2-day"~"Model B\nDay 10 breakpoint\nLag (i) = 2 days",
                          "Model B, Day 9, 2-day"~"Model B\nDay 9 breakpoint\nLag (i) = 2 days",
                          "Model E, Day 11, 4-day"~"Model E\nDay 11 breakpoint\nLag (i) = 4 days",
                          "Model B, Day 11, 4-day"~"Model B\nDay 11 breakpoint\nLag (i) = 4 days",
-                         "Model E, Day 8, 4-day"~"Model E\nDay 8 breakpoint\nLag (i) = 4 days",
                          "Model E, Day 9, 3-day"~"Model E\nDay 9 breakpoint\nLag (i) = 3 days",
+                         "Model E, Day 8, 4-day"~"Model E\nDay 8 breakpoint\nLag (i) = 4 days",
                          "Model B, Day 9, 3-day"~"Model B\nDay 9 breakpoint\nLag (i) = 3 days"),
          facet_lab=case_match(label,
-                              "Model B, Day 10, 3-day"~"Best model (22.1%)",
-                              "Model B, Day 10, 2-day"~"Second-best model (10.2%)",
-                              "Model E, Day 10, 3-day"~"Third-best model (9.9%)",
-                              "Model B, Day 9, 2-day"~"Fourth-best model (8.7%)",
-                              "Model E, Day 11, 4-day"~"Fifth-model (7.5%)",
-                              "Model B, Day 11, 4-day"~"Sixth-best model (6.0%)",
-                              "Model E, Day 8, 4-day"~"Seventh-best model (5.1%)",
-                              "Model E, Day 9, 3-day"~"Eighth-best model (4.7%)",
-                              "Model B, Day 9, 3-day"~"Ninth-best model (3.0%)"),
+                              "Model B, Day 10, 3-day"~"Best model (20.6%)",
+                              "Model E, Day 10, 3-day"~"Second-best model (12.2%)",
+                              "Model B, Day 10, 2-day"~"Third-best model (10.4%)",
+                              "Model B, Day 9, 2-day"~"Fourth-best model (10.4%)",
+                              "Model E, Day 11, 4-day"~"Fifth-model (6.2%)",
+                              "Model B, Day 11, 4-day"~"Sixth-best model (5.2%)",
+                              "Model E, Day 9, 3-day"~"Seventh-best model (3.9%)",
+                              "Model E, Day 8, 4-day"~"Eighth-best model (3.7%)",
+                              "Model B, Day 9, 3-day"~"Ninth-best model (3.6%)"),
          tag=case_match(label,
                         "Model B, Day 10, 3-day"~"A",
-                        "Model B, Day 10, 2-day"~"B",
-                        "Model E, Day 10, 3-day"~"C",
+                        "Model E, Day 10, 3-day"~"B",
+                        "Model B, Day 10, 2-day"~"C",
                         "Model B, Day 9, 2-day"~"D",
                         "Model E, Day 11, 4-day"~"E",
                         "Model B, Day 11, 4-day"~"F",
-                        "Model E, Day 8, 4-day"~"G",
-                        "Model E, Day 9, 3-day"~"H",
+                        "Model E, Day 9, 3-day"~"G",
+                        "Model E, Day 8, 4-day"~"H",
                         "Model B, Day 9, 3-day"~"I"))
 
-top_pred_df$facet_lab <- factor(top_pred_df$facet_lab,levels=c("Best model (22.1%)",
-                                                               "Second-best model (10.2%)",
-                                                               "Third-best model (9.9%)",
-                                                               "Fourth-best model (8.7%)",
-                                                               "Fifth-model (7.5%)",
-                                                               "Sixth-best model (6.0%)",
-                                                               "Seventh-best model (5.1%)",
-                                                               "Eighth-best model (4.7%)",
-                                                               "Ninth-best model (3.0%)"))
-top_pred_text$facet_lab <- factor(top_pred_text$facet_lab,levels=c("Best model (22.1%)",
-                                                                   "Second-best model (10.2%)",
-                                                                   "Third-best model (9.9%)",
-                                                                   "Fourth-best model (8.7%)",
-                                                                   "Fifth-model (7.5%)",
-                                                                   "Sixth-best model (6.0%)",
-                                                                   "Seventh-best model (5.1%)",
-                                                                   "Eighth-best model (4.7%)",
-                                                                   "Ninth-best model (3.0%)"))
+top_pred_df$facet_lab <- factor(top_pred_df$facet_lab,levels=c("Best model (20.6%)",
+                                                               "Second-best model (12.2%)",
+                                                               "Third-best model (10.4%)",
+                                                               "Fourth-best model (10.4%)",
+                                                               "Fifth-model (6.2%)",
+                                                               "Sixth-best model (5.2%)",
+                                                               "Seventh-best model (3.9%)",
+                                                               "Eighth-best model (3.7%)",
+                                                               "Ninth-best model (3.6%)"))
+top_pred_text$facet_lab <- factor(top_pred_text$facet_lab,levels=c("Best model (20.6%)",
+                                                                   "Second-best model (12.2%)",
+                                                                   "Third-best model (10.4%)",
+                                                                   "Fourth-best model (10.4%)",
+                                                                   "Fifth-model (6.2%)",
+                                                                   "Sixth-best model (5.2%)",
+                                                                   "Seventh-best model (3.9%)",
+                                                                   "Eighth-best model (3.7%)",
+                                                                   "Ninth-best model (3.6%)"))
 
 phase_lab <- data.frame(c("Phase 1","","","","","","","",""),
                         c("Phase 2","","","","","","","",""),
-                        c("Best model (22.1%)",
-                          "Second-best model (10.2%)",
-                          "Third-best model (9.9%)",
-                          "Fourth-best model (8.7%)",
-                          "Fifth-model (7.5%)",
-                          "Sixth-best model (6.0%)",
-                          "Seventh-best model (5.1%)",
-                          "Eighth-best model (4.7%)",
-                          "Ninth-best model (3.0%)")) |> setNames(c("Phase1","Phase2","facet_lab"))
-phase_lab$facet_lab <- factor(phase_lab$facet_lab,levels=c("Best model (22.1%)",
-                                                           "Second-best model (10.2%)",
-                                                           "Third-best model (9.9%)",
-                                                           "Fourth-best model (8.7%)",
-                                                           "Fifth-model (7.5%)",
-                                                           "Sixth-best model (6.0%)",
-                                                           "Seventh-best model (5.1%)",
-                                                           "Eighth-best model (4.7%)",
-                                                           "Ninth-best model (3.0%)"))
+                        c("Best model (20.6%)",
+                          "Second-best model (12.2%)",
+                          "Third-best model (10.4%)",
+                          "Fourth-best model (10.4%)",
+                          "Fifth-model (6.2%)",
+                          "Sixth-best model (5.2%)",
+                          "Seventh-best model (3.9%)",
+                          "Eighth-best model (3.7%)",
+                          "Ninth-best model (3.6%)")) |> setNames(c("Phase1","Phase2","facet_lab"))
+phase_lab$facet_lab <- factor(phase_lab$facet_lab,levels=c("Best model (20.6%)",
+                                                           "Second-best model (12.2%)",
+                                                           "Third-best model (10.4%)",
+                                                           "Fourth-best model (10.4%)",
+                                                           "Fifth-model (6.2%)",
+                                                           "Sixth-best model (5.2%)",
+                                                           "Seventh-best model (3.9%)",
+                                                           "Eighth-best model (3.7%)",
+                                                           "Ninth-best model (3.6%)"))
 
 
 top_pred_df |>
@@ -273,22 +273,22 @@ ggsave("FigureS5.jpeg",width=25,height=25,units="cm")
 #### 10-24 facet plot ####
 ##########################
 top_pred_df <- preds_df |>
-  filter(label=="Model E, Day 10, 2-day"|
-           label=="Model C, Day 10, 2-day"|
+  filter(label=="Model C, Day 10, 2-day"|
+           label=="Model E, Day 10, 2-day"|
            label=="Model C, Day 9, 2-day"|
+           label=="Model B, No breakpoint, 4-day"|
            label=="Model F, Day 9, 3-day"|
            label=="Model F, Day 10, 2-day"|
-           label=="Model B, Day 11, 3-day"|
            label=="Model F, Day 10, 3-day"|
            
-           label=="Model B, No breakpoint, 4-day"|
-           label=="Model E, Day 11, 3-day"|
-           label=="Model A, No breakpoint, 4-day"|
-           label=="Model F, Day 11, 4-day"|
+           label=="Model B, Day 11, 3-day"|
            label=="Model F, Day 8, 4-day"|
+           label=="Model A, No breakpoint, 4-day"|
+           label=="Model E, Day 11, 3-day"|
+           label=="Model F, Day 11, 4-day"|
+           label=="Model B, Day 9, 1-day"|
            label=="Model C, Day 10, 3-day"|
-           label=="Model D, Day 11, 4-day"|
-           label=="Model B, Day 10, 4-day"
+           label=="Model E, Day 9, 4-day"
            
   ) |> 
   mutate(pABA=case_match(box,
@@ -297,113 +297,113 @@ top_pred_df <- preds_df |>
                          3~"Low",
                          4~"Unsupplemented"),
          facet_lab=case_match(label,
-                              "Model E, Day 10, 2-day"~"Tenth-best model (2.9%)",
-                              "Model C, Day 10, 2-day"~"Eleventh-best model (2.8%)",
+                              "Model C, Day 10, 2-day"~"Tenth-best model (3.2%)",
+                              "Model E, Day 10, 2-day"~"Eleventh-best model (2.9%)",
                               "Model C, Day 9, 2-day"~"Twelfth-best model (2.5%)",
-                              "Model F, Day 9, 3-day"~"Thirteenth-best model (2.5%)",
-                              "Model F, Day 10, 2-day"~"Fourteenth-best model (2.4%)",
-                              "Model B, Day 11, 3-day"~"Fifteenth-best model (2.2%)",
-                              "Model F, Day 10, 3-day"~"Sixteenth-best model (1.8%)",
+                              "Model B, No breakpoint, 4-day"~"Thirteenth-best model (2.3%)",
+                              "Model F, Day 9, 3-day"~"Fourteenth-best model (2.2%)",
+                              "Model F, Day 10, 2-day"~"Fifteenth-best model (2.0%)",
+                              "Model F, Day 10, 3-day"~"Sixteenth-best model (1.9%)",
                               
-                              "Model B, No breakpoint, 4-day"~"Seventeenth-best model (1.6%)",
-                              "Model E, Day 11, 3-day"~"Eighteenth-best model (1.2%)",
-                              "Model A, No breakpoint, 4-day"~"Nineteenth-best model (0.4%)",
-                              "Model F, Day 11, 4-day"~"Twentieth-best model (0.4%)",
-                              "Model F, Day 8, 4-day"~"Twenty-first-best model (0.4%)",
-                              "Model C, Day 10, 3-day"~"Twenty-second-best model (0.3%)",
-                              "Model D, Day 11, 4-day"~"Twenty-third-best model (0.3%)",
-                              "Model B, Day 10, 4-day"~"Twenty-fourth-best model (0.2%)")
+                              "Model B, Day 11, 3-day"~"Seventeenth-best model (1.4%)",
+                              "Model F, Day 8, 4-day"~"Eighteenth-best model (1.1%)",
+                              "Model A, No breakpoint, 4-day"~"Nineteenth-best model (0.9%)",
+                              "Model E, Day 11, 3-day"~"Twentieth-best model (0.7%)",
+                              "Model F, Day 11, 4-day"~"Twenty-first-best model (0.7%)",
+                              "Model B, Day 9, 1-day"~"Twenty-second-best model (0.3%)",
+                              "Model C, Day 10, 3-day"~"Twenty-third-best model (0.3%)",
+                              "Model E, Day 9, 4-day"~"Twenty-fourth-best model (0.3%)")
   )
 top_pred_df$pABA <- factor(top_pred_df$pABA,levels=c("Unsupplemented","Low","Medium","High"))
 
 top_pred_text <- data.frame(top_pred_df$label |> unique()) |> setNames("label") |>
   mutate(text=case_match(label,
-                         "Model E, Day 10, 2-day"~"Model E\nDay 10 breakpoint\nLag (i) = 2 days",
                          "Model C, Day 10, 2-day"~"Model C\nDay 10 breakpoint\nLag (i) = 2 days",
+                         "Model E, Day 10, 2-day"~"Model E\nDay 10 breakpoint\nLag (i) = 2 days",
                          "Model C, Day 9, 2-day"~"Model C\nDay 9 breakpoint\nLag (i) = 2 days",
+                         "Model B, No breakpoint, 4-day"~"Model B\nNo breakpoint\nLag (i) = 4 days",
                          "Model F, Day 9, 3-day"~"Model F\nDay 9 breakpoint\nLag (i) = 3 days",
                          "Model F, Day 10, 2-day"~"Model F\nDay 10 breakpoint\nLag (i) = 2 days",
-                         "Model B, Day 11, 3-day"~"Model B\nDay 11 breakpoint\nLag (i) = 3 days",
                          "Model F, Day 10, 3-day"~"Model F\nDay 10 breakpoint\nLag (i) = 3 days",
                          
-                         "Model B, No breakpoint, 4-day"~"Model B\nNo breakpoint\nLag (i) = 4 days",
-                         "Model E, Day 11, 3-day"~"Model E\nDay 11 breakpoint\nLag (i) = 3 days",
-                         "Model A, No breakpoint, 4-day"~"Model A\nNo breakpoint\nLag (i) = 4 days",
-                         "Model F, Day 11, 4-day"~"Model F\nDay 11 breakpoint\nLag (i) = 4 days",
+                         "Model B, Day 11, 3-day"~"Model B\nDay 11 breakpoint\nLag (i) = 3 days",
                          "Model F, Day 8, 4-day"~"Model F\nDay 8 breakpoint\nLag (i) = 4 days",
+                         "Model A, No breakpoint, 4-day"~"Model A\nNo breakpoint\nLag (i) = 4 days",
+                         "Model E, Day 11, 3-day"~"Model E\nDay 11 breakpoint\nLag (i) = 3 days",
+                         "Model F, Day 11, 4-day"~"Model F\nDay 11 breakpoint\nLag (i) = 4 days",
+                         "Model B, Day 9, 1-day"~"Model B\nDay 9 breakpoint\nLag (i) = 1 day",
                          "Model C, Day 10, 3-day"~"Model C\nDay 10 breakpoint\nLag (i) = 3 days",
-                         "Model D, Day 11, 4-day"~"Model D\nDay 11 breakpoint\nLag (i) = 4 days",
-                         "Model B, Day 10, 4-day"~"Model B\nDay 10 breakpoint\nLag (i) = 4 days"
+                         "Model E, Day 9, 4-day"~"Model E\nDay 9 breakpoint\nLag (i) = 4 days"
                          
                          ),
          facet_lab=case_match(label,
-                              "Model E, Day 10, 2-day"~"Tenth-best model (2.9%)",
-                              "Model C, Day 10, 2-day"~"Eleventh-best model (2.8%)",
+                              "Model C, Day 10, 2-day"~"Tenth-best model (3.2%)",
+                              "Model E, Day 10, 2-day"~"Eleventh-best model (2.9%)",
                               "Model C, Day 9, 2-day"~"Twelfth-best model (2.5%)",
-                              "Model F, Day 9, 3-day"~"Thirteenth-best model (2.5%)",
-                              "Model F, Day 10, 2-day"~"Fourteenth-best model (2.4%)",
-                              "Model B, Day 11, 3-day"~"Fifteenth-best model (2.2%)",
-                              "Model F, Day 10, 3-day"~"Sixteenth-best model (1.8%)",
+                              "Model B, No breakpoint, 4-day"~"Thirteenth-best model (2.3%)",
+                              "Model F, Day 9, 3-day"~"Fourteenth-best model (2.2%)",
+                              "Model F, Day 10, 2-day"~"Fifteenth-best model (2.0%)",
+                              "Model F, Day 10, 3-day"~"Sixteenth-best model (1.9%)",
                               
-                              "Model B, No breakpoint, 4-day"~"Seventeenth-best model (1.6%)",
-                              "Model E, Day 11, 3-day"~"Eighteenth-best model (1.2%)",
-                              "Model A, No breakpoint, 4-day"~"Nineteenth-best model (0.4%)",
-                              "Model F, Day 11, 4-day"~"Twentieth-best model (0.4%)",
-                              "Model F, Day 8, 4-day"~"Twenty-first-best model (0.4%)",
-                              "Model C, Day 10, 3-day"~"Twenty-second-best model (0.3%)",
-                              "Model D, Day 11, 4-day"~"Twenty-third-best model (0.3%)",
-                              "Model B, Day 10, 4-day"~"Twenty-fourth-best model (0.2%)"),
+                              "Model B, Day 11, 3-day"~"Seventeenth-best model (1.4%)",
+                              "Model F, Day 8, 4-day"~"Eighteenth-best model (1.1%)",
+                              "Model A, No breakpoint, 4-day"~"Nineteenth-best model (0.9%)",
+                              "Model E, Day 11, 3-day"~"Twentieth-best model (0.7%)",
+                              "Model F, Day 11, 4-day"~"Twenty-first-best model (0.7%)",
+                              "Model B, Day 9, 1-day"~"Twenty-second-best model (0.3%)",
+                              "Model C, Day 10, 3-day"~"Twenty-third-best model (0.3%)",
+                              "Model E, Day 9, 4-day"~"Twenty-fourth-best model (0.3%)"),
          tag=case_match(label,
-                        "Model E, Day 10, 2-day"~"A",
-                        "Model C, Day 10, 2-day"~"B",
+                        "Model C, Day 10, 2-day"~"A",
+                        "Model E, Day 10, 2-day"~"B",
                         "Model C, Day 9, 2-day"~"C",
-                        "Model F, Day 9, 3-day"~"D",
-                        "Model F, Day 10, 2-day"~"E",
-                        "Model B, Day 11, 3-day"~"F",
+                        "Model B, No breakpoint, 4-day"~"D",
+                        "Model F, Day 9, 3-day"~"E",
+                        "Model F, Day 10, 2-day"~"F",
                         "Model F, Day 10, 3-day"~"G",
                         
-                        "Model B, No breakpoint, 4-day"~"H",
-                        "Model E, Day 11, 3-day"~"I",
+                        "Model B, Day 11, 3-day"~"H",
+                        "Model F, Day 8, 4-day"~"I",
                         "Model A, No breakpoint, 4-day"~"J",
-                        "Model F, Day 11, 4-day"~"K",
-                        "Model F, Day 8, 4-day"~"L",
-                        "Model C, Day 10, 3-day"~"M",
-                        "Model D, Day 11, 4-day"~"N",
-                        "Model B, Day 10, 4-day"~"O"))
+                        "Model E, Day 11, 3-day"~"K",
+                        "Model F, Day 11, 4-day"~"L",
+                        "Model B, Day 9, 1-day"~"M",
+                        "Model C, Day 10, 3-day"~"N",
+                        "Model E, Day 9, 4-day"~"O"))
 
-top_pred_df$facet_lab <- factor(top_pred_df$facet_lab,levels=c("Tenth-best model (2.9%)",
-                                                               "Eleventh-best model (2.8%)",
+top_pred_df$facet_lab <- factor(top_pred_df$facet_lab,levels=c("Tenth-best model (3.2%)",
+                                                               "Eleventh-best model (2.9%)",
                                                                "Twelfth-best model (2.5%)",
-                                                               "Thirteenth-best model (2.5%)",
-                                                               "Fourteenth-best model (2.4%)",
-                                                               "Fifteenth-best model (2.2%)",
-                                                               "Sixteenth-best model (1.8%)",
+                                                               "Thirteenth-best model (2.3%)",
+                                                               "Fourteenth-best model (2.2%)",
+                                                               "Fifteenth-best model (2.0%)",
+                                                               "Sixteenth-best model (1.9%)",
                                                                
-                                                               "Seventeenth-best model (1.6%)",
-                                                               "Eighteenth-best model (1.2%)",
-                                                               "Nineteenth-best model (0.4%)",
-                                                               "Twentieth-best model (0.4%)",
-                                                               "Twenty-first-best model (0.4%)",
+                                                               "Seventeenth-best model (1.4%)",
+                                                               "Eighteenth-best model (1.1%)",
+                                                               "Nineteenth-best model (0.9%)",
+                                                               "Twentieth-best model (0.7%)",
+                                                               "Twenty-first-best model (0.7%)",
                                                                "Twenty-second-best model (0.3%)",
                                                                "Twenty-third-best model (0.3%)",
-                                                               "Twenty-fourth-best model (0.2%)"))
+                                                               "Twenty-fourth-best model (0.3%)"))
 
-top_pred_text$facet_lab <- factor(top_pred_text$facet_lab,levels=c("Tenth-best model (2.9%)",
-                                                                   "Eleventh-best model (2.8%)",
+top_pred_text$facet_lab <- factor(top_pred_text$facet_lab,levels=c("Tenth-best model (3.2%)",
+                                                                   "Eleventh-best model (2.9%)",
                                                                    "Twelfth-best model (2.5%)",
-                                                                   "Thirteenth-best model (2.5%)",
-                                                                   "Fourteenth-best model (2.4%)",
-                                                                   "Fifteenth-best model (2.2%)",
-                                                                   "Sixteenth-best model (1.8%)",
+                                                                   "Thirteenth-best model (2.3%)",
+                                                                   "Fourteenth-best model (2.2%)",
+                                                                   "Fifteenth-best model (2.0%)",
+                                                                   "Sixteenth-best model (1.9%)",
                                                                    
-                                                                   "Seventeenth-best model (1.6%)",
-                                                                   "Eighteenth-best model (1.2%)",
-                                                                   "Nineteenth-best model (0.4%)",
-                                                                   "Twentieth-best model (0.4%)",
-                                                                   "Twenty-first-best model (0.4%)",
+                                                                   "Seventeenth-best model (1.4%)",
+                                                                   "Eighteenth-best model (1.1%)",
+                                                                   "Nineteenth-best model (0.9%)",
+                                                                   "Twentieth-best model (0.7%)",
+                                                                   "Twenty-first-best model (0.7%)",
                                                                    "Twenty-second-best model (0.3%)",
                                                                    "Twenty-third-best model (0.3%)",
-                                                                   "Twenty-fourth-best model (0.2%)"))
+                                                                   "Twenty-fourth-best model (0.3%)"))
 
 top_pred_CF <- top_pred_df |>
   filter(model=="Model C"|model=="Model F")

@@ -40,14 +40,14 @@ stats_df |> count(bp) |> mutate(percent = 100* n/nrow(stats_df))
 
 #### Lag stacked barplot ####
 stats_lag <- stats_df |> select(lag) |> group_by(lag) |> count()
-stats_lag_tmp <- data.frame(c("1-day","5-day"),c(0,0)) |> setNames(c("lag","n"))
+stats_lag_tmp <- data.frame(c("5-day"),c(0)) |> setNames(c("lag","n"))
 stats_lag <- bind_rows(stats_lag_tmp,stats_lag)
 
 lagPalette <- c("#ffffcc","#c2e699","#78c679","#31a354","#006837")
 
 plot_labs_lag <- data.frame(
   c("4-day","3-day","2-day"),
-  c(22.6,48,29.4)
+  c(20.9,47,31.6)
 ) |> setNames(c("lag","percent"))
 
 lag_bar <- stats_lag |>
@@ -91,7 +91,7 @@ stats_model$form <- factor(stats_model$model,
 
 plot_labs_model <- data.frame(
   c("Model F","Model E","Model C","Model B"),
-  c(7.4,31.1,5.8,54.9)
+  c(7.9,30,6.3,54.6)
 ) |> setNames(c("model","percent"))
 
 model_bar <- stats_model |>
@@ -140,7 +140,7 @@ bpPalette <- c("#fed98e","#fe9929","#d95f0e","#993404","grey")
 
 plot_labs_bp <- data.frame(
   c("Day 11","Day 10","Day 9","Day 8"),
-  c(17.9,52.5,22,9)
+  c(17.3,55,21.7,7)
 ) |> setNames(c("bp","percent"))
 
 bp_bar <- stats_bp |>
@@ -176,10 +176,11 @@ form_df <- stats_df |>
   ungroup() |>
   group_by(lag) |>
   mutate(freq=n/sum(n)) |>
-  ungroup()
+  ungroup() |>
+  filter(lag!="1-day")
 
 form_df$lag <- factor(form_df$lag,levels=c("2-day","3-day","4-day"),
-                      labels=c("2-day lag (29.5%)","3-day lag (48.0%)","4-day lag (22.5%)"))
+                      labels=c("2-day lag (31.6%)","3-day lag (47.0%)","4-day lag (20.9%)"))
 
 form_plot <- form_df |>
   ggplot()+
