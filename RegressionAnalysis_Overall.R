@@ -110,7 +110,7 @@ loglik_optim_box <- function(parlist,datalist){
 }
 
 sigmoid <- function (lagRBC,F0,theta,k) {
-  F0/(1+exp(k*(lagRBC-theta)/1e7))
+  F0/(1+exp(k*(lagRBC-theta)/1e5))
 }
 
 objfun <- function(par,data){
@@ -128,12 +128,16 @@ objfun <- function(par,data){
   
 }
 
-foreach (
-  r=seq_len(rep_num),
-  .options.future = list(seed = TRUE)
-) %dofuture% {
+#foreach (
+  #r=seq_len(rep_num),
+  #.options.future = list(seed = TRUE)
+#) %dofuture% {
+
+res <- list()
+
+for (r in seq_len(rep_num)){
   
-  #for (r in seq_len(rep_num)){
+  print(r)
   
   stats_df <- list()
   preds_df <- list()
@@ -195,7 +199,8 @@ foreach (
                 loglik=loglik(m),
                 coef=length(m$coefficients),
                 n=nrow(dat),
-                p=summary(m)$df[3]+1
+                p=summary(m)$df[3]+1,
+                con=0,
               )
             ) |>
             bind_rows(.id="model"),
@@ -208,7 +213,8 @@ foreach (
                 loglik=loglik(m),
                 coef=length(m$coefficients),
                 n=nrow(dat_sub),
-                p=summary(m)$df[3]+1
+                p=summary(m)$df[3]+1,
+                con=0
               )
             ) |>
             bind_rows(.id="model"),
@@ -221,12 +227,14 @@ foreach (
         
         #Sigmoid function without box
         m7 <- optim(c(F0=4e6,theta=5.5e6,k=0.1),objfun,data=dat,method="L-BFGS-B",
+                    control=list(maxit=1000),
                     lower=c(F0=1e6,theta=2e6,k=0),
                     upper=c(F0=6e6,theta=8e6,k=1))
         
         if(m7$convergence!=0){break}
         
         m7_sub <- optim(c(F0=4e6,theta=5.5e6,k=0.1),objfun,data=dat_sub,method="L-BFGS-B",
+                        control=list(maxit=1000),
                         lower=c(F0=1e6,theta=2e6,k=0),
                         upper=c(F0=6e6,theta=8e6,k=1))
         
@@ -243,6 +251,7 @@ foreach (
             coef=length(m7$par),
             n=nrow(dat),
             p=coef+1,
+            con=m7$convergence
           ),
           tibble(
             dataset="sub",
@@ -254,6 +263,7 @@ foreach (
             coef=length(m7_sub$par),
             n=nrow(dat_sub),
             p=coef+1,
+            con=m7_sub$convergence
           )
         ) |>
           mutate(
@@ -268,24 +278,28 @@ foreach (
         dat_4 <- filter(dat,box=="04")
         
         sig_box01 <-  optim(c(F0=4e6,theta=5.5e6,k=0.1),objfun,data=dat_1,method="L-BFGS-B",
+                            control=list(maxit=1000),
                             lower=c(F0=1e6,theta=2e6,k=0),
                             upper=c(F0=6e6,theta=8e6,k=1))
         
         if(sig_box01$convergence!=0){break}
         
         sig_box02 <-  optim(c(F0=4e6,theta=5.5e6,k=0.1),objfun,data=dat_2,method="L-BFGS-B",
+                            control=list(maxit=1000),
                             lower=c(F0=1e6,theta=2e6,k=0),
                             upper=c(F0=6e6,theta=8e6,k=1))
         
         if(sig_box02$convergence!=0){break}
         
         sig_box03 <-  optim(c(F0=4e6,theta=5.5e6,k=0.1),objfun,data=dat_3,method="L-BFGS-B",
+                            control=list(maxit=1000),
                             lower=c(F0=1e6,theta=2e6,k=0),
                             upper=c(F0=6e6,theta=8e6,k=1))
         
         if(sig_box03$convergence!=0){break}
         
         sig_box04 <-  optim(c(F0=4e6,theta=5.5e6,k=0.1),objfun,data=dat_4,method="L-BFGS-B",
+                            control=list(maxit=1000),
                             lower=c(F0=1e6,theta=2e6,k=0),
                             upper=c(F0=6e6,theta=8e6,k=1))
         
@@ -297,24 +311,28 @@ foreach (
         dat_sub4 <- filter(dat_sub,box=="04")
         
         sig_sub_box01 <-  optim(c(F0=4e6,theta=5.5e6,k=0.1),objfun,data=dat_sub1,method="L-BFGS-B",
+                                control=list(maxit=1000),
                                 lower=c(F0=1e6,theta=2e6,k=0),
                                 upper=c(F0=6e6,theta=8e6,k=1))
         
         if(sig_sub_box01$convergence!=0){break}
         
         sig_sub_box02 <-  optim(c(F0=4e6,theta=5.5e6,k=0.1),objfun,data=dat_sub2,method="L-BFGS-B",
+                                control=list(maxit=1000),
                                 lower=c(F0=1e6,theta=2e6,k=0),
                                 upper=c(F0=6e6,theta=8e6,k=1))
         
         if(sig_sub_box02$convergence!=0){break}
         
         sig_sub_box03 <-  optim(c(F0=4e6,theta=5.5e6,k=0.1),objfun,data=dat_sub3,method="L-BFGS-B",
+                                control=list(maxit=1000),
                                 lower=c(F0=1e6,theta=2e6,k=0),
                                 upper=c(F0=6e6,theta=8e6,k=1))
         
         if(sig_sub_box03$convergence!=0){break}
         
         sig_sub_box04 <-  optim(c(F0=4e6,theta=5.5e6,k=0.1),objfun,data=dat_sub4,method="L-BFGS-B",
+                                control=list(maxit=1000),
                                 lower=c(F0=1e6,theta=2e6,k=0),
                                 upper=c(F0=6e6,theta=8e6,k=1))
         
@@ -332,6 +350,7 @@ foreach (
             coef=length(c(sig_box01$par,sig_box02$par,sig_box03$par,sig_box04$par)),
             n=nrow(dat_1)+nrow(dat_2)+nrow(dat_3)+nrow(dat_4),
             p=coef+4,
+            con=max(sig_box01$convergence,sig_box02$convergence,sig_box03$convergence,sig_box04$convergence)
           ),
           tibble(
             dataset="sub",
@@ -344,6 +363,7 @@ foreach (
             coef=length(c(sig_sub_box01$par,sig_sub_box02$par,sig_sub_box03$par,sig_sub_box04$par)),
             n=nrow(dat_sub1)+nrow(dat_sub2)+nrow(dat_sub3)+nrow(dat_sub4),
             p=coef+4,
+            con=max(sig_sub_box01$convergence,sig_sub_box02$convergence,sig_sub_box03$convergence,sig_sub_box04$convergence)
           )
         ) |>
           mutate(
@@ -377,7 +397,6 @@ foreach (
         
         pred <- sigmoid(grid$lagRBC,m7$par[1],m7$par[2],m7$par[3]) |> as.data.frame()
         names(pred) <- "pred"
-        
         grid_m7 <- bind_cols(grid,pred) |>
           mutate(model="m7") |>
           select(model,lag,bp,box,phase,rep,lagRBC,pred)
@@ -451,7 +470,8 @@ foreach (
                 loglik=loglik(m),
                 coef=length(m$coefficients),
                 n=nrow(dat),
-                p=summary(m)$df[3]+1
+                p=summary(m)$df[3]+1,
+                con=0
               )
             ) |>
             bind_rows(.id="model"),
@@ -464,7 +484,8 @@ foreach (
                 loglik=loglik(m),
                 coef=length(m$coefficients),
                 n=nrow(dat_sub),
-                p=summary(m)$df[3]+1
+                p=summary(m)$df[3]+1,
+                con=0
               )
             ) |>
             bind_rows(.id="model"),
@@ -503,20 +524,28 @@ foreach (
     } #end loop over breakpoints
   } #end loop over lags
   
-  list(
+  tmp <- list(
     rep=r,
     stats=bind_rows(stats_df),
     preds=bind_rows(preds_df)
   )
   
-} -> res
+  res <- append(res,tmp)
+  
+} #-> res
 
-res |>
-  lapply(\(x) getElement(x,"stats")) |>
+lapply(which(names(res)=="stats"),\(x) res[[x]]) |>
   bind_rows() -> stats_df
-res |>
-  lapply(\(x) getElement(x,"preds")) |>
+
+lapply(which(names(res)=="preds"),\(x) res[[x]]) |>
   bind_rows() -> preds_df
+
+#res |>
+  #lapply(\(x) getElement(x,"stats")) |>
+  #bind_rows() -> stats_df
+#res |>
+  #lapply(\(x) getElement(x,"preds")) |>
+  #bind_rows() -> preds_df
 
 preds_df |>
   group_by(model,lag,bp,box,phase,lagRBC) |>
