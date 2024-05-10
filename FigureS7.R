@@ -42,7 +42,7 @@ lik_df |>
   ggplot()+
   geom_boxplot(aes(x=label,y=loglik))+
   geom_jitter(aes(x=label,y=loglik),size=2,alpha=0.2)+
-  labs(x="Overall model, in order of increasing frequency among selected models",y="Log likelihood")+
+  labs(x="Model structure (form, breakpoint, lag)",y="Log likelihood")+
   theme_bw()+
   theme(
     axis.text=element_text(angle=90),

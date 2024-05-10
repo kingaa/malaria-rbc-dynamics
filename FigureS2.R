@@ -21,7 +21,7 @@ source("POMP_GroupLevel_DataPrep.R")
                 limits=c(1,10^7.5))+ 
   scale_colour_manual(values=cbPalette[2:5])+
   theme_bw()+
-  xlab("Time (d post-infection)")+ylab("Parasites (density per µL)")+
+  xlab("Time (d post-infection)")+ylab("Parasite density (per µL)")+
   theme(
     axis.title=element_text(size=15),
     axis.text=element_text(size=13),

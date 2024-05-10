@@ -23,7 +23,7 @@ stats_df$bp[is.na(stats_df$bp)] <- "None"
 stats_df$model <- factor(stats_df$model,levels=c("m1","m2","m3","m4","m5","m6","m7","m8"),
                          labels=c("Model A","Model B","Model C","Model D","Model E","Model F","Model G","Model H"))
 stats_df$bp <- factor(stats_df$bp,levels=c(8,9,10,11,"None"),labels=c("Day 8","Day 9","Day 10","Day 11","None"))
-stats_df$lag <- factor(stats_df$lag,levels=c(1,2,3,4,5),labels=c("1-day","2-day","3-day","4-day","5-day"))
+stats_df$lag <- factor(stats_df$lag,levels=c(1,2,3,4,5),labels=c("1","2","3","4","5"))
 
 overall_freq <- stats_df |> 
   group_by(bp,model,lag) |> 
@@ -40,12 +40,12 @@ df_x$label="X"
 overall_freq |>
   ggplot(aes(x=lag,y=freq))+
   geom_bar(stat="identity",fill="darkblue")+
-  geom_text(aes(label = freq),vjust=-0.5)+
+  geom_text(aes(label = freq),vjust=-0.5,size=3)+
   geom_text(data=df_x,aes(x=2.5,y=0.15,label=label),size=25,col="lightgrey")+
   facet_grid(bp~model)+
   ylim(0,0.3)+
-  labs(x="Reticulocyte response lag",y="Frequency")+
-  scale_x_discrete(breaks=c("1-day","2-day","3-day","4-day"))+
+  labs(x="Reticulocyte response lag (days)",y="Frequency")+
+  scale_x_discrete(breaks=c("1","2","3","4"))+
   theme_bw()+
   theme(
     strip.background=element_blank(),
